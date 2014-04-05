@@ -44,7 +44,7 @@
 	void main()
 	{
 		vec3 tColor = texture2D( texture, vUv ).rgb;
-		float a = (0.9 - dot(/*normalize(*/color/*)*/, tColor) / (length(tColor) + 0.05)) * 3.0;
+		float a = (length(tColor - color) - 0.5) * 7.0;
 		
 //		gl_FragColor = vec4(a, a, a, 1.0);
 		gl_FragColor = vec4(tColor, a);
@@ -137,7 +137,7 @@ ChromaKeyMaterial.prototype = Object.create(THREE.ShaderMaterial.prototype);
 	scene.add(floor);
 
 
-	var movieMaterial = new ChromaKeyMaterial('girl.ogv', 242, 421, 0xff00);
+	var movieMaterial = new ChromaKeyMaterial('girl.ogv', 242, 421, 0xd400);
 	var movieGeometry = new THREE.PlaneGeometry(60, 105, 4, 4);
 
 	var girls = []
