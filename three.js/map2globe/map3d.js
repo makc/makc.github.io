@@ -52,9 +52,7 @@ function Map3DGeometry (data, innerRadius) {
 				this.vertices[a].clone ().multiplyScalar (-1),
 				this.vertices[c].clone ().multiplyScalar (-1)
 			] ) );
-			
-			/* you don't really want to use these uvs
-			this.faceVertexUvs[ 0 ].push( [ uvs[ b ], uvs[ a ], uvs[ c ] ]); */
+			this.faceVertexUvs[ 0 ].push( [ uvs[ b ], uvs[ a ], uvs[ c ] ]); // shitty uvs to make 3js exporter happy
 		}
 	}
 	
@@ -73,15 +71,19 @@ function Map3DGeometry (data, innerRadius) {
 						// polygon
 						normal = vb1.clone ().sub (va1).cross ( va2.clone ().sub (va1) ).normalize ();
 						this.faces.push ( new THREE.Face3( a, b, n + a, [ normal, normal, normal ] ) );
+						this.faceVertexUvs[ 0 ].push( [ uvs[ a ], uvs[ b ], uvs[ a ] ]); // shitty uvs to make 3js exporter happy
 						if (innerRadius > 0) {
 							this.faces.push ( new THREE.Face3( b, n + b, n + a, [ normal, normal, normal ] ) );
+							this.faceVertexUvs[ 0 ].push( [ uvs[ b ], uvs[ b ], uvs[ a ] ]); // shitty uvs to make 3js exporter happy
 						}
 					} else {
 						// hole
 						normal = va2.clone ().sub (va1).cross ( vb1.clone ().sub (va1) ).normalize ();
 						this.faces.push ( new THREE.Face3( b, a, n + a, [ normal, normal, normal ] ) );
+						this.faceVertexUvs[ 0 ].push( [ uvs[ b ], uvs[ a ], uvs[ a ] ]); // shitty uvs to make 3js exporter happy
 						if (innerRadius > 0) {
 							this.faces.push ( new THREE.Face3( b, n + a, n + b, [ normal, normal, normal ] ) );
+							this.faceVertexUvs[ 0 ].push( [ uvs[ b ], uvs[ a ], uvs[ b ] ]); // shitty uvs to make 3js exporter happy
 						}
 					}
 				}

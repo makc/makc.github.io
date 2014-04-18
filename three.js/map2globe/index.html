@@ -1,27 +1,34 @@
 <html>
 <head>
 	<meta charset="utf8" />
-	<!--script src="http://javascript.poly2tri.googlecode.com/hg/src/poly2tri.js"></script-->
-	<script src="poly2tri.js"></script>
-	<!--script src="http://threejs.org/build/three.min.js"></script-->
-	<script src="three.js"></script>
+	<title>3D Map Demo</title>
+	<!-- use this ancient poly2tri revision on github, since that's what they had in hg repo, I think -->
+	<script src="https://rawgit.com/r3mi/poly2tri.js/b12ad51f5ad1f580cbc42e4b3f65785e1d024c1d/src/poly2tri.js"></script>
+
+	<!-- use r63 before I figure out what's wrong with current ObjectExporter -->
+	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/build/three.js"></script>
 	
-	<!--script src="https://raw.github.com/mrdoob/three.js/master/examples/js/exporters/MaterialExporter.js"></script>
-	<script src="https://raw.github.com/mrdoob/three.js/master/examples/js/exporters/BufferGeometryExporter.js"></script>
-	<script src="https://raw.github.com/mrdoob/three.js/master/examples/js/exporters/GeometryExporter.js"></script>
-	<script src="https://raw.github.com/mrdoob/three.js/master/examples/js/exporters/ObjectExporter.js"></script-->
+	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/MaterialExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/BufferGeometryExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/GeometryExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/ObjectExporter.js"></script>
 	
 	<script src="map3d.js"></script>
 	
 	<script>
-	/*
-	http://threejs.org/editor/
-	http://stackoverflow.com/questions/16289936/three-js-online-editor-export-normal-map
-	http://javascript.poly2tri.googlecode.com/hg/index.html
-	file:///Users/makc/Downloads/mapshaper-master/www/index.html
-	
-	
-	*/
+		options = {
+			points : 1234, flat : true, innerr : 0.98
+		};
+
+		output = {
+			features : null, scene : null
+		};
+
+		function onRadiusChange (input) {
+			var r = parseFloat(input.value)
+			if (r < 0) r = 0; if (r > 1) r = 1;
+			input.value = options.innerr = r;
+		}
 	
 		function onFile (event) {
 			var files = event.target.files;
@@ -153,11 +160,6 @@
 				}
 			}
 
-/*console.log(results);
-			window.open (window.URL.createObjectURL (
-				new Blob ([ JSON.stringify( results ) ], { type : 'text/plain' })
-			));*/
-			
 			init3D (results);
 		}
 		
@@ -246,7 +248,7 @@
 				maxx = Math.max (maxx, p.x); maxy = Math.max (maxy, p.y);
 			}
 			
-			var N = 1234, r2d = 180 / Math.PI;
+			var N = options.points, r2d = 180 / Math.PI;
 			for (i = 1; i <= N; i++) {
 				// Bauer, Robert, "Distribution of Points on a Sphere with Application to Star Catalogs",
 				// Journal of Guidance, Control, and Dynamics, January-February 2000, vol.23 no.1 (130-137).
@@ -270,6 +272,11 @@
 		}
 		
 		function init3D (features) {
+			output.features = features;
+
+			document.getElementById("content").style.display = "none";
+			document.getElementById("result").style.display = "";
+
 			var renderer, parameters = { canvas: document.getElementsByTagName("canvas")[0] };
 			try {
 				renderer = new THREE.WebGLRenderer (parameters);
@@ -277,53 +284,177 @@
 				console.warn(noWebGL);
 				renderer = new THREE.CanvasRenderer (parameters);
 			}
+			renderer.setClearColor(0xffffff);
 			
 			var camera = new THREE.PerspectiveCamera (70, parameters.canvas.width / parameters.canvas.height, 1, 1000);
 			camera.position.z = 400;
 	
-			var scene = new THREE.Scene ();
+			var scene = output.scene = new THREE.Scene ();
 	
 			var light = new THREE.DirectionalLight (0xffffff);
 			light.position.set (0, 0, 1);
 			scene.add (light);
 
-			var geometry = new THREE.CubeGeometry (20, 20, 20);
-			var material = new THREE.MeshLambertMaterial ({
-				color: 0x4682B4, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
-
 			var globe = new THREE.Object3D ();
 			globe.name = "globe";
 			globe.rotation.x = 0.6;
 			scene.add (globe);
-			
-//			globe.add(new THREE.Mesh( geometry, material )); // todo replace
+
+			var MaterialParams = options.flat ? function (color) {
+				this.color = color; this.shading = THREE.FlatShading;
+			} : function (color) {
+				this.color = color; this.shading = THREE.SmoothShading; this.vertexColors = THREE.VertexColors;
+			};
 			
 			for (var name in features) {
-				geometry = new Map3DGeometry (features[name], 0.98);
-				var material = new THREE.MeshLambertMaterial ({
-					color: 0xffffff * Math.random(), shading: THREE./*Flat*/SmoothShading, vertexColors: THREE.VertexColors });
+				var geometry = new Map3DGeometry (features[name], options.innerr);
+				var material = new THREE.MeshLambertMaterial (new MaterialParams (0xffffff * Math.random()));
 				var fmesh = new THREE.Mesh (geometry, material); fmesh.name = name;
 				var scale = 200 * (1 + 0.04 * Math.random());
 				fmesh.scale = new THREE.Vector3 (scale, scale, scale);
 				globe.add (fmesh);
 			}
 
-/*			window.open (window.URL.createObjectURL (
-				new Blob ([ JSON.stringify( new THREE.ObjectExporter().parse( scene ) ) ], { type : 'text/plain' })
-			));*/
-
 			(function () {
 				requestAnimationFrame (arguments.callee);
 				globe.rotation.y += 0.01;
 				renderer.render (scene, camera);
 			})();
+
+		    var resize = function () {
+		    	var w = parameters.canvas.parentElement.clientWidth - 30;
+		    	var h = parameters.canvas.parentElement.clientHeight - 30;
+		        // notify the renderer of the size change
+		        renderer.setSize(w, h);
+		        // update the camera
+		        camera.aspect = w / h;
+		        camera.updateProjectionMatrix();
+		    }
+		 
+		    window.addEventListener('resize', resize, false);
+		    resize();
+			
+			setTimeout(function () {
+				console.log ("scene has " + renderer.info.render.faces + " faces");
+			}, 123);
+		}
+
+		function exportMap3D () {
+			window.open (window.URL.createObjectURL (
+				new Blob ([ JSON.stringify( output.features ) ], { type : 'text/plain' })
+			));
+		}
+
+		function exportScene () {
+			window.open (window.URL.createObjectURL (
+				new Blob ([ JSON.stringify( new THREE.ObjectExporter().parse( output.scene ) ) ], { type : 'text/plain' })
+			));
 		}
 	</script>
+
+	<link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" />
+
+	<style type="text/css">
+		#content {
+			width: 75%;
+			margin: 0 auto;
+			padding-top: 15px;
+		}
+
+		#result {
+			padding: 15px;
+		}
+
+		/* extra bootstrap rules */
+		div.panel-primary a {
+			color: white;
+			text-decoration: underline;
+		}
+
+		div.panel-body input {
+			margin-right: 10px;
+		}
+
+		@media (min-width:992px) {
+			div.col-md-4 .panel {
+				min-height: 135px;
+			}
+
+			div.col-md-4:not(:first-of-type) {
+				padding-left: 5px;
+			}
+		}
+
+		.panel .col-md-6 {
+			text-align: center;
+		}
+
+		.panel .preview {
+			width: 100%;
+			height: 70%;
+		}
+	</style>
 </head>
 <body>
-	<div>
-		<input type="file" onchange="onFile(event)"></input>
+	<div id="content">
+		<div class="row">
+			<div class="col-md-4">
+				<div class="panel panel-info">
+					<div class="panel-heading">How round do you want the surface to be?</div>
+					<div class="panel-body">
+						<input autocomplete="off" type="radio" name="points" onclick="options.points=parseInt(this.value)" value="1234" checked>Somewhat round</input><br />
+						<input autocomplete="off" type="radio" name="points" onclick="options.points=parseInt(this.value)" value="12345">Really smooth</input>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div class="panel panel-info">
+					<div class="panel-heading">Do you want smooth shading in the preview?</div>
+					<div class="panel-body">
+						<input autocomplete="off" type="radio" name="shader" onclick="options.flat=false">Yes</input><br />
+						<input autocomplete="off" type="radio" name="shader" onclick="options.flat=true" checked>No</input>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div class="panel panel-info">
+					<div class="panel-heading">What should be globe inner radius in the preview (0&nbsp;&le;&nbsp;r&nbsp;&le;&nbsp;1)?</div>
+					<div class="panel-body">
+						<div class="input-group">
+							<span class="input-group-addon">r &nbsp;=</span>
+							<input autocomplete="off" type="text" class="form-control" value="0.98" onchange="onRadiusChange(this)" />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="panel panel-primary">
+			<div class="panel-heading">Select <a href="http://geojson.org/">geojson</a> file to convert (or use one of <a href="globe_hi.geojson" target="_blank">these</a> <a href="globe_lo.geojson" target="_blank">files</a> for quick test):</div>
+			<div class="panel-body">
+				<input autocomplete="off" type="file" onchange="onFile(event)" class="file" />
+			</div>
+		</div>
 	</div>
-	<canvas width="1400" height="1000"></canvas>
+	<div id="result" style="display:none;">
+		<div class="panel panel-info">
+			<div class="panel-heading">Enjoy the preview:</div>
+			<div class="panel-body preview">
+				<canvas></canvas>
+			</div>
+		</div>
+		<div class="panel panel-primary">
+			<div class="panel-heading">Save the result:</div>
+			<div class="panel-body">
+				<div class="row">
+					<div class="col-md-6">
+						<button type="button" class="btn btn-primary" onclick="exportMap3D()">Export data for Map3DGeometry</button>
+					</div>
+					<div class="col-md-6">
+						<button type="button" class="btn btn-primary" onclick="exportScene()">Export whole THREE.Scene</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
 </html>
