@@ -3,7 +3,7 @@
 	<meta charset="utf8" />
 	<title>3D Map Demo</title>
 	<!-- use this ancient poly2tri revision on github, since that's what they had in hg repo, I think -->
-	<script src="https://rawgit.com/r3mi/poly2tri.js/b12ad51f5ad1f580cbc42e4b3f65785e1d024c1d/src/poly2tri.js"></script>
+	<script src="https://rawgit.com/r3mi/poly2tri.js/08d2be62c98fa91a5f5b45d132b1678849f1d0a1/src/poly2tri.js"></script>
 
 	<!-- use r63 before I figure out what's wrong with current ObjectExporter -->
 	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/build/three.js"></script>
@@ -165,12 +165,12 @@
 		
 		var d2r = Math.PI / 180, r2d = 180 / Math.PI, mercatorScale = 1.7;
 		
-		function preparePoints (pts) {
-			var i;
-			for (i = 0; i < pts.length; i++) {
-				var p = pts [i];
+		function preparePoints (points) {
+			var i, pts = [];
+			for (i = 0; i < points.length; i++) {
+				var p = points [i];
 				// equirectangular to scaled mercator
-				p[1] = Math.log (Math.tan (Math.PI / 4 + d2r * p[1] / 2)) * r2d * mercatorScale;
+				pts[i] = [ p[0], Math.log (Math.tan (Math.PI / 4 + d2r * p[1] / 2)) * r2d * mercatorScale ];
 			}
 			
 			var done;
