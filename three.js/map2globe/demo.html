@@ -1,0 +1,195 @@
+<html>
+<head>
+	<meta charset="utf8" />
+	<title>3D Map Demo</title>
+	<link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" />
+	<style>
+		body {
+			margin: 0px;
+		}
+		#demo {
+			width: 100%;
+			height: 100%;
+			position: relative;
+		}
+		#demo > canvas {
+			z-index: 1;
+		}
+		#demo > div {
+			padding: 20px;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			z-index: 2;
+		}
+		.panel {
+			background-color: rgba(255, 255, 255, 0.5);
+			margin-left: 20px;
+			float: right;
+		}
+		.btn-group-vertical {
+			float: left;
+		}
+		.panel-heading {
+			padding: 6px 12px;
+		}
+	</style>
+</head>
+<body>
+
+<div id="demo">
+	<div>
+		<div class="btn-group-vertical">
+			<button type="button" class="btn btn-warning" onclick="showGDP()">GDP (per capita)</button>
+	  		<button type="button" class="btn btn-warning" onclick="showDebt()">Public debt (per capita)</button>
+		</div>
+		<div class="panel panel-warning">
+			<div class="panel-heading">What is better indicator of <a href="http://en.wikipedia.org/wiki/Standard_of_living">standard of living</a>?</div>
+			<div class="panel-body">
+				This 3D plot shows <a href="http://en.wikipedia.org/wiki/Gross_domestic_product">GDP</a> or <a href="http://en.wikipedia.org/wiki/Public_debt">public debt</a>, per capita, according to<br /> latest available worldbank figures (<a href="http://data.worldbank.org/indicator/NY.GDP.PCAP.PP.CD">1</a>, <a href="http://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS/countries">2</a>).<br /><br />
+				It also shows how to use <a href="https://github.com/makc/makc.github.io/blob/master/three.js/map2globe/map3d.js">Map3DGeometry</a> class for making 3D plots :)
+			</div>
+		</div>
+	</div>
+</div>
+
+<script src="http://threejs.org/build/three.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenLite.min.js"></script>
+
+<script src="map3d.js"></script>
+
+<script type="x-shader" id="sem-vs">
+varying vec2 vN;
+
+void main() {
+    vec4 p = vec4( position, 1. );
+
+    vec3 e = normalize( vec3( modelViewMatrix * p ) );
+    vec3 n = normalize( normalMatrix * normal );
+
+    vec3 r = reflect( e, n );
+    float m = 2. * sqrt( 
+        pow( r.x, 2. ) + 
+        pow( r.y, 2. ) + 
+        pow( r.z + 1., 2. ) 
+    );
+    vN = r.xy / m + .5;
+
+    gl_Position = projectionMatrix * modelViewMatrix * p;
+}
+</script>
+
+<script type="x-shader" id="sem-fs">
+uniform sampler2D tMatCap;
+
+varying vec2 vN;
+
+void main() {
+    vec3 base = texture2D( tMatCap, vN ).rgb;
+    gl_FragColor = vec4( base, 1. );
+}
+</script>
+
+<script>
+function makeEnvMapMaterial(file) {
+	// http://www.clicktorelease.com/blog/creating-spherical-environment-mapping-shader
+	var material = new THREE.ShaderMaterial({
+	    uniforms: { 
+	        tMatCap: { 
+	            type: 't', 
+	            value: THREE.ImageUtils.loadTexture( file ) 
+	        },
+	    },
+	    vertexShader: document.getElementById( "sem-vs" ).textContent,
+	    fragmentShader: document.getElementById( "sem-fs" ).textContent,
+	    shading: THREE.SmoothShading
+	});
+
+	material.uniforms.tMatCap.value.wrapS = 
+	material.uniforms.tMatCap.value.wrapT = 
+		THREE.ClampToEdgeWrapping;
+	return material;
+}
+
+function demo(data) {
+
+	var scene = new THREE.Scene();
+
+	var camera = new THREE.PerspectiveCamera();
+	camera.position.set(0, 600, 800);
+	camera.lookAt(scene.position);
+	scene.add(camera);
+
+	var renderer, gold, blue, radius;
+	try {
+		renderer = new THREE.WebGLRenderer({ antialias: true });
+		gold = makeEnvMapMaterial("gold.jpg");
+		blue = makeEnvMapMaterial("blue.jpg");
+		radius = 0.995;
+
+	} catch (noWebGL) {
+		renderer = new THREE.CanvasRenderer();
+		gold = new THREE.MeshLambertMaterial ({ color : 0xffaa50, shading : THREE.FlatShading });
+		blue = new THREE.MeshLambertMaterial ({ color : 0x50aaff, shading : THREE.FlatShading });
+		radius = 0.9; // smaller radius makes the sorting less atrocious
+
+		var light = new THREE.DirectionalLight (0xffffff);
+		light.position.set (0, 0, 1);
+		scene.add (light); // materials are solid black without the light
+	}
+	renderer.setClearColor(0xffffff);
+
+	document.getElementById('demo').appendChild(renderer.domElement);
+
+	var globe = new THREE.Object3D ();
+	globe.scale = new THREE.Vector3 (250, 250, 250);
+	scene.add (globe);
+
+	var geometry = new THREE.SphereGeometry(radius, 30, 15);
+	globe.add (new THREE.Mesh (geometry, blue));
+
+	for (var name in data) {
+		geometry = new Map3DGeometry (data[name], 0);
+		globe.add (data[name].mesh = new THREE.Mesh (geometry, gold));
+	}
+
+	showGDP = function () {
+		for (var name in data) {
+			var scale = (1 + 7e-6 * ( data[name].data.gdp || 0 ) );
+			TweenLite.to(data[name].mesh.scale, 0.5, { x : scale, y : scale, z : scale });
+		}
+	}
+
+	showDebt = function () {
+		for (var name in data) {
+			var scale = (1 + 7e-6 * ( data[name].data.gdp || 0 ) * ( data[name].data.debt || 0 ) / 100);
+			TweenLite.to(data[name].mesh.scale, 0.5, { x : scale, y : scale, z : scale });
+		}
+	}
+
+	var resize = function () {
+    	var w = renderer.domElement.parentElement.clientWidth;
+    	var h = renderer.domElement.parentElement.clientHeight;
+        // notify the renderer of the size change
+        renderer.setSize(w, h);
+        // update the camera
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+	};
+
+	var render = function () {
+		requestAnimationFrame (render);
+		globe.rotation.y += 0.01;
+		renderer.render (scene, camera);
+	};
+
+	window.addEventListener('resize', resize, false);
+
+	resize();
+	render();
+}
+</script>
+<script src="demo.js"></script>
+
+</body>
+</html>
