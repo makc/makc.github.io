@@ -1,0 +1,310 @@
+<html>
+<head>
+	<title>makc</title>
+	<style>
+	/* BS styles, in case I will use BS here later */
+	body {
+		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+		font-size: 14px;
+		line-height: 1.42857143;
+		color: #333;
+		background-color: #fff;
+	}
+
+	a {
+		color: #428bca;
+		text-decoration: none;
+	}
+
+	a:hover, a:focus {
+		color: #2a6496;
+		text-decoration: underline
+	}
+
+	a:focus {
+		outline: thin dotted;
+		outline: 5px auto -webkit-focus-ring-color;
+		outline-offset: -2px;
+	}
+
+	/* Gallery and stuff */
+	#outer {
+		height: 250px;
+		overflow-y: auto;
+	}
+
+	.text {
+		margin: 10px 10px;
+		min-height: 60px;
+	}
+
+	#gallery svg {
+		display: none;
+		cursor: pointer;
+	}
+
+	#images img {
+		display: inline-block;
+		margin: 0px 10px 20px 10px;
+		width: 350px;
+		cursor: pointer;
+	}
+
+	@media (min-width: 860px) {
+		.text {
+			margin-left: 50px;
+		}
+		#gallery svg, #images {
+			display: block;
+			float: left;
+		}
+		#gallery, #images {
+			font-size: 0;
+			white-space: nowrap;
+		}
+		#images {
+			height: 250px;
+			overflow: hidden;
+			margin-left: 20px;
+			margin-right: 20px;
+		}
+		#images img {
+			margin: 0px;
+			margin-left: 20px;
+		}
+		#images img:first-child {
+			margin-left: 0px;
+		}
+		/* m = 2, 350 * m + 20 * (m - 1) */
+		#images, .text {
+			width: 720px;
+		}
+		#gallery {
+			width: 840px;
+		}
+	}
+
+	@media (min-width: 1230px) {
+		/* m = 3 */
+		#images, .text {
+			width: 1090px;
+		}
+		#gallery {
+			width: 1210px;
+		}
+	}
+
+	@media (min-width: 1600px) {
+		/* m = 4 */
+		#images, .text {
+			width: 1460px;
+		}
+		#gallery {
+			width: 1580px;
+		}
+	}
+
+	.flipH {
+		-moz-transform: scaleX(-1);
+        -o-transform: scaleX(-1);
+        -webkit-transform: scaleX(-1);
+        transform: scaleX(-1);
+        filter: FlipH;
+        -ms-filter: "FlipH";
+	}
+
+	.flipV {
+		-moz-transform: scaleY(-1);
+        -o-transform: scaleY(-1);
+        -webkit-transform: scaleY(-1);
+        transform: scaleY(-1);
+        filter: FlipV;
+        -ms-filter: "FlipV";
+	}
+
+	.fadeIn {
+		opacity: 1;
+		transition: opacity .75s;
+		-moz-transition: opacity .75s;
+		-webkit-transition: opacity .75s;
+	}
+
+	.fadeOut, .hide {
+		opacity: 0;
+		transition: opacity .25s;
+		-moz-transition: opacity .25s;
+		-webkit-transition: opacity .25s;
+	}
+
+	.hide {
+		max-height: 0px;
+	}
+
+	div.text > a {
+		text-decoration: none;
+	}
+
+	div.text > a > svg {
+		margin-right: 15px;
+	}
+
+	@media (min-height: 700px) {
+		html {
+			background: url('i/b.jpg') repeat-x left top;
+		}
+		body > div:first-child {
+			margin-top: 180px;
+		}
+	}
+
+	</style>
+
+	<script>
+	var lastIndex = 0;
+	function showText (index) {
+		var lastDiv = document.getElementById("text" + lastIndex);
+		lastDiv.className = "fadeOut text";
+		setTimeout (function () {
+			lastDiv.className = "hide";
+
+			var div = document.getElementById("text" + index);
+			div.className = "fadeIn text";
+
+			lastIndex = index;
+		}, 250);
+	}
+	</script>
+</head>
+<body>
+	<div class="text"><h3>Hello.</h3>
+		You have made it to my personal internet hub.<br />Buttons at the bottom will take you to the nearest point of interest.</div><div class="hide">&nbsp;</div>
+
+	<div id="text0" class="text">Who am I? Like <a href="http://en.wikipedia.org/wiki/Carl_Jung">Jung</a> said, "<i>you are what you do</i>". So, click these thumbnails below to find out who I am.</div>
+	<div id="text1" class="hide">Digital artist is something I always wished I was. I thought I was going to be one, when I did this <a href="http://fc02.deviantart.net/fs38/f/2008/335/a/a/Golconde_by_anaglyph.swf">Golconda piece clone</a> in 2008, or this <a href="http://makc3d.wordpress.com/2010/03/12/mycelium/">mycelium project clone</a> in 2010, but - let's be honest - those were imitations of art. Oh well, maybe one day, <a href="http://poorlydrawnlines.com/comic/accepted/">Sasha</a>...</div>
+	<div id="text2" class="hide">Back in 2009, when people used Flash to make websites, I was on the team that made some of <a href="http://artyso.com/jewelry-website-portfolio">these websites</a> for Artyso. I think about these websites as something we'd call "web applicaitons" today, and not psd templates converted to html + swf. Not at all :)</div>
+	<div id="text3" class="hide">I have always sought for projects that were something more than psd2swf conversion. For example, this <a href="https://www.youtube.com/watch?v=fbVmBUmxk3I">interactive AR thing</a> for Proje Calide, one of the best things that happened to me as a freelancer in 2011. This project used very simple IK and <a href="http://makc3d.wordpress.com/2011/04/06/matching-colors-in-rgb/">CV</a> algorithms (and could have been much better if we used Kinect instead :)</div>
+	<div id="text4" class="hide">For the short time FLARToolKit have made black and white markers popular for AR applicaitons. FLARToolKit itself, however, had <a href="http://makc3d.wordpress.com/2009/04/16/flartoolkit-and-alternativa3d-anyone/">licensing</a> <a href="https://groups.google.com/d/msg/flartoolkit-userz/DhyHjNRQS1g/nDBp2pda_NAJ">problems</a>, performance problems and restrictive marker requirements, so I tried to work around that with my own <a href="http://makc3d.wordpress.com/tag/qtrack/">free AR tracker</a>.</div>
+	<div id="text5" class="hide">I was firm Flash 3D believer since its <a href="https://code.google.com/p/sandy/source/detail?r=456">early</a> <a href="http://makc3d.wordpress.com/2008/11/04/fast-animation-alternativa3d/">fake</a> <a href="http://makc.googlecode.com/svn/trunk/flash/alternativa3d_quake/quake.swf">3D</a> <a href="http://makc.googlecode.com/svn/trunk/flash/away_bloat/bloat.swf">days</a>. These days Flash can actually use your GPU for 3D, and so can browser itself, too. Any way, I do post <a href="http://makc3d.wordpress.com/tag/3d/">cool 3D things</a> to my blog sometimes (or so I think).</div>
+	<div id="text6" class="hide">I was one of those people inspired by <a href="https://www.youtube.com/watch?v=PUv66718DII">Bret Victor's talk</a> enough to spend a year working on <a href="http://makc3d.wordpress.com/tag/colt/">real life livecoding tool</a>. This project gave me valuable lessons in product development, as well as some unexpected Java experience.</div>
+	<div id="outer">
+		<div id="gallery">
+			<svg id="lt" xmlns="http://www.w3.org/2000/svg" version="1.1" width="30" height="250" viewBox="200 30 820 1230" onclick="lt()">
+				<path fill="#333333" d="M185 599l592 -592l240 240l-353 353l353 353l-240 240z"/>
+			</svg>
+
+			<div id="images">
+				<img src="i/golconde.jpg" onclick="showText(1)" /><!--
+			 --><img src="i/websites.jpg" onclick="showText(2)" /><!--
+			 --><img src="i/ben10ar.jpg" onclick="showText(3)" /><!--
+			 --><img src="i/qtrack.jpg" onclick="showText(4)" /><!--
+			 --><img src="i/3d.jpg" onclick="showText(5)" /><!--
+			 --><img src="i/colt.jpg" onclick="showText(6)" />
+			</div>
+
+			<svg id="rt" xmlns="http://www.w3.org/2000/svg" version="1.1" width="30" height="250" viewBox="200 30 820 1230" onclick="rt()" class="flipH">
+				<path fill="#333333" d="M185 599l592 -592l240 240l-353 353l353 353l-240 240z"/>
+			</svg>
+		</div>
+
+	</div>
+
+	<br />
+
+	<div class="text">
+		<a href="mailto:makcthegreat@gmail.com">
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="30" height="30" viewBox="-2.11765 820 2608 1964" class="flipV" style="margin-bottom: 7px;">
+				<path fill="#2a6496" fill0="#0084B4" d="M1974 714q0 -84 -11 -116q-32 -94 -157 -94h-1134l-504 -504h-84q-18 0 -29 10t-11 22l-2 10q-32 32 -37 42t-5 42v1554l924 -756h126l924 756v-966zM126 1848h1722l-860 -660z" />
+			</svg>
+		</a>
+
+		<a href="https://twitter.com/makc3d">
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="32" height="28" viewBox="-2.11765 -128 2608 1964" class="flipV">
+				<path fill="#55ACEE" d="M1792 1320q0 -10 2 -14v-14q0 -206 -78 -413t-227 -377t-369 -272t-492 -102q-344 0 -628 184q24 -6 72 -6h26q280 0 508 174q-128 2 -237 83t-145 203q30 -6 38 -6h20q6 -2 21 -2t30 1t35 5t28 6t12 2q-142 28 -235 142t-93 260v6q82 -52 186 -52q-88 60 -132 146 q-50 88 -50 172t11 125t43 105q156 -192 372 -300q222 -116 472 -128q-10 70 -10 92q0 170 120 290t292 120t298 -130q145 32 260 100q-24 -72 -70 -130q-52 -60 -110 -96q132 22 234 64q-69 -110 -204 -212v-26z" />
+			</svg>
+		</a>
+
+		<a href="https://facebook.com/makc3d">
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="26" height="26" viewBox="0 0 512 512" style="margin-left: -2.5px; margin-bottom: 2.5px;">
+				<path fill="#3B5998" d="M398.14,50.5H117.98c-36.408,0-68.48,26.452-68.48,62.86v280.16c0,36.408,32.072,68.98,68.48,68.98h173.466 c-0.325-54,0.077-114.134-0.185-166.387c-11.064-0.112-22.138-0.684-33.202-0.854c0.041-18.467,0.017-37.317,0.024-55.781 c11.057-0.137,22.121-0.163,33.178-0.268c0.338-17.957-0.338-36.025,0.354-53.966c1.103-14.205,6.519-28.563,17.14-38.377 c12.859-12.239,31.142-16.397,48.387-16.912c18.233-0.163,36.468-0.076,54.71-0.068c0.072,19.24,0.072,38.482-0.008,57.722 c-11.789-0.02-23.585,0.023-35.374-0.025c-7.468-0.467-15.145,5.198-16.504,12.609c-0.177,12.875-0.064,25.757-0.057,38.628 c17.285,0.073,34.577-0.02,51.862,0.044c-1.264,18.629-3.581,37.168-6.285,55.637c-15.272,0.137-30.554,1.514-45.818,1.602 c-0.129,52.236,0.04,112.395-0.093,166.395h38.564c36.408,0,63.36-32.572,63.36-68.98V113.36C461.5,76.952,434.548,50.5,398.14,50.5 z"/>
+			</svg>
+		</a>
+
+		<a href="https://github.com/makc">
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="24" height="25" viewBox="0 -200 1024 1024" class="flipV" style="margin-left: 8px; margin-bottom: 2px;">
+				<path fill="#333" d="M512 832c-283 0-512-229-512-512 0-226 147-418 350-486 26-5 35 11 35 25 0 12 0 53-1 95-142-31-172 60-172 60-23 59-57 75-57 75-47 32 4 31 4 31 51-4 78-53 78-53 46-78 120-56 149-43 5 33 18 56 33 68-114 13-233 57-233 253 0 56 20 102 53 137-5 13-23 65 5 136 0 0 43 14 141-53 41 11 85 17 128 17 44 0 87-6 128-17 98 66 141 53 141 53 28-71 10-123 5-136 33-36 53-81 53-137 0-197-120-240-234-253 18-16 35-47 35-95 0-68-1-124-1-141 0-14 9-30 35-25 203 68 350 260 350 486 0 283-229 512-512 512z" horiz-adv-x="1024" />
+			</svg>
+		</a>
+
+		<a href="http://makc3d.wordpress.com/">
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.0" width="30" height="30" viewBox="2.5 1.5 7.0 5.0" style="fill-rule: evenodd; margin-left: 3px;">
+				<path fill="#1f1a17" d="M 5.84646,1.91309 C 6.425775,1.91309 6.95326,2.135094 7.34869,2.498562 C 7.154934,2.4934281 6.961544,2.60859 6.953509,2.872393 C 6.9372492,3.405739 7.591245,3.519259 7.238796,4.592003 L 6.947288,5.479306 L 6.153367,3.140656 C 6.1410757,3.1044552 6.1554064,3.0838883 6.1998946,3.0838883 L 6.4243436,3.0838883 C 6.436009,3.0838883 6.4455444,3.0739277 6.4455444,3.0617308 L 6.4455444,2.9287938 C 6.4455444,2.9166009 6.4359893,2.9061363 6.4243436,2.9066403 C 5.9992926,2.9252269 5.5767416,2.9253529 5.1567836,2.9066403 C 5.1451458,2.9061285 5.1355828,2.9166088 5.1355828,2.9287938 L 5.1355828,3.0617308 C 5.1355828,3.0739158 5.1451182,3.0838883 5.1567836,3.0838883 L 5.3824606,3.0838883 C 5.4326614,3.0838883 5.4467165,3.1006166 5.4585512,3.1329749 L 5.7848192,4.0251359 L 5.2940712,5.5067859 L 4.4875472,3.1309659 C 4.4774606,3.1012494 4.4895669,3.0838911 4.5183189,3.0838911 L 4.7754689,3.0838911 C 4.7871303,3.0838911 4.7966658,3.0739305 4.7966658,3.0617336 L 4.7966658,2.9287966 C 4.7966658,2.9166037 4.7870949,2.9060328 4.7754689,2.9066431 C 4.5056699,2.9209738 4.2348389,2.9238557 3.9825629,2.9264462 C 4.3784489,2.3166032 5.0653829,1.9130962 5.8464629,1.9130962 L 5.84646,1.91309 z M 7.79968,3.07642 C 7.97033,3.390833 8.067231,3.751062 8.067231,4.13386 C 8.067231,4.973911 7.600479,5.7051 6.912291,6.08241 L 7.605027,4.12073 C 7.712259,3.817092 7.811858,3.406809 7.799684,3.07642 L 7.79968,3.07642 z M 6.59001,6.22685 C 6.357522,6.3095035 6.10727,6.354637 5.846455,6.354637 C 5.621809,6.354637 5.405018,6.3211291 5.200624,6.2590701 L 5.88477,4.2984601 L 6.59001,6.2268501 L 6.59001,6.22685 z M 4.89622,6.1414051 C 4.145208,5.7852361 3.62568,5.0201451 3.62568,4.1338651 C 3.62568,3.8053451 3.6971446,3.4934871 3.825227,3.2129081 L 4.896217,6.1414081 L 4.89622,6.1414051 z M 5.846452,1.7047251 C 7.187792,1.7047251 8.275592,2.7925251 8.275592,4.1338651 C 8.275592,5.4752051 7.187792,6.5630051 5.846452,6.5630051 C 4.505112,6.5630051 3.417312,5.4752051 3.417312,4.1338651 C 3.417312,2.7925251 4.505112,1.7047251 5.846452,1.7047251 L 5.846452,1.7047251 z M 5.846452,1.5511901 C 7.272582,1.5511901 8.429132,2.7077401 8.429132,4.1338701 C 8.429132,5.5600001 7.272582,6.7165501 5.846452,6.7165501 C 4.420322,6.7165501 3.263772,5.5600001 3.263772,4.1338701 C 3.263772,2.7077401 4.420322,1.5511901 5.846452,1.5511901 L 5.846452,1.5511901 z">
+			</svg>
+		</a>
+
+		<a href="http://wonderfl.net/user/makc3d/codes">
+			<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="16" height="26" viewBox="12 0 40 64" style="margin-left: 3px; margin-bottom: 2px;">
+				<path fill="#000122" stroke="none" d="M 31.9 36 L 11.9 36 11.9 57 Q 11.9 59.9 17.75 61.95 23.6 64 31.9 64 40.2 64 46.05 61.95 51.9 59.9 51.9 57 L 51.9 36 31.9 36 Z"/>
+				<path fill="#898989" stroke="none" d="M 51.9 36 L 51.9 13 31.9 13 31.9 36 51.9 36 Z"/>
+				<path fill="#E61312" stroke="none" d="M 51.9 12.9 Q 51.9 7.45 46.05 3.6 40.2 -0.2 31.9 -0.2 23.6 -0.2 17.75 3.6 11.9 7.45 11.9 12.9 11.9 12.9501953125 11.9 13 L 11.9 36 31.9 36 31.9 13 51.9 13 Q 51.9 12.9501953125 51.9 12.9 Z"/>
+				<path fill="#FFFFFF" stroke="none" d="M 43.9 42.1 Q 43.9 42.0501953125 43.9 42 43.9 38.7 40.35 36.35 37.9625 34.746875 34.9 34.2 L 34.9 10 28.9 10 28.9 34.2 Q 25.8236328125 34.7455078125 23.4 36.35 19.9 38.7 19.9 42 19.9 42.0501953125 19.9 42.1 L 19.9 52 25.9 52 25.9 42.1 28.9 42.1 28.9 52 34.9 52 34.9 42.1 37.9 42.1 37.9 52 43.9 52 43.9 42.1 Z"/>
+			</svg>
+		</a>
+	</div>
+
+<script>
+(function () {
+	var i = 0,
+
+	$ = function (id) {
+		return document.getElementById (id);
+	},
+
+	op = function (id, opacity) {
+		$(id).style.opacity = opacity;
+	},
+
+	raf = window.requestAnimationFrame || function (f) { f(); };
+
+	lt = function () {
+		if (i > 0) {
+			i --;
+			op("rt", 1);
+			if (i == 0) {
+				op("lt", 0.3);
+			}
+		}
+	};
+
+	rt = function () {
+		var m = Math.floor( $("images").offsetWidth / 350),
+		    n = $("images").children.length - m;
+		if (i < n) {
+			i ++;
+			op("lt", 1);
+			if (i == n) {
+				op("rt", 0.3);
+			}
+		}
+	};
+
+	setInterval (function () {
+		raf (function () {
+			var x = i * 370, dx = x - $("images").scrollLeft;
+			if (dx != 0) {
+				if (dx > 0) {
+					dx = Math.ceil (Math.min (40, dx * 0.5));
+				} else {
+					dx = Math.floor (Math.max (-40, dx * 0.5));
+				}
+				$("images").scrollLeft += dx;
+			}
+		});
+	}, 50);
+
+	$("images").scrollLeft = 0; op("lt", 0.3);
+
+	// todo css animation by className = "srollLeft" + i ??
+})();
+</script>
+</body>
+</html>
