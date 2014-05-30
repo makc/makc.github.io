@@ -5,13 +5,13 @@
 	<!-- use this ancient poly2tri revision on github, since that's what they had in hg repo, I think -->
 	<script src="https://rawgit.com/r3mi/poly2tri.js/08d2be62c98fa91a5f5b45d132b1678849f1d0a1/src/poly2tri.js"></script>
 
-	<!-- use r63 before I figure out what's wrong with current ObjectExporter -->
-	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/build/three.js"></script>
+	<!-- r67 -->
+	<script src="https://rawgit.com/mrdoob/three.js/a083e4442732f076e85446ca42e5f7a829b7d28b/build/three.js"></script>
 	
-	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/MaterialExporter.js"></script>
-	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/BufferGeometryExporter.js"></script>
-	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/GeometryExporter.js"></script>
-	<script src="https://rawgit.com/mrdoob/three.js/a3ba076568abfbafc2f4edfecca80587781bc962/examples/js/exporters/ObjectExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a083e4442732f076e85446ca42e5f7a829b7d28b/examples/js/exporters/MaterialExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a083e4442732f076e85446ca42e5f7a829b7d28b/examples/js/exporters/BufferGeometryExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a083e4442732f076e85446ca42e5f7a829b7d28b/examples/js/exporters/GeometryExporter.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/a083e4442732f076e85446ca42e5f7a829b7d28b/examples/js/exporters/ObjectExporter.js"></script>
 	
 	<script src="map3d.js"></script>
 	
@@ -311,7 +311,7 @@
 				var material = new THREE.MeshLambertMaterial (new MaterialParams (0xffffff * Math.random()));
 				var fmesh = new THREE.Mesh (geometry, material); fmesh.name = name;
 				var scale = 200 * (1 + 0.04 * Math.random());
-				fmesh.scale = new THREE.Vector3 (scale, scale, scale);
+				fmesh.scale.set(scale, scale, scale);
 				globe.add (fmesh);
 			}
 

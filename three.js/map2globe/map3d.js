@@ -1,3 +1,17 @@
+//            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+//                    Version 2, December 2004
+//
+// Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+//
+// Everyone is permitted to copy and distribute verbatim or modified
+// copies of this license document, and changing it is allowed as long
+// as the name is changed.
+//
+//            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+//   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+//
+//  0. You just DO WHAT THE FUCK YOU WANT TO.
+
 function Map3DGeometry (data, innerRadius) {
 	if ((arguments.length < 2) || isNaN(parseFloat(innerRadius)) || !isFinite(innerRadius) || (innerRadius < 0)) {
 		// if no valid inner radius is given, do not extrude
@@ -91,7 +105,6 @@ function Map3DGeometry (data, innerRadius) {
 		}
 	}
 	
-	this.computeCentroids ();
 	this.computeFaceNormals ();
 	
 	this.boundingSphere = new THREE.Sphere (new THREE.Vector3 (), 1);

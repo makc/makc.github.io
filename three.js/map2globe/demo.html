@@ -53,8 +53,8 @@
 	</div>
 </div>
 
-<!-- use r66 before I fix map3d.js to be compatible with r67 -->
-<script src="http://rawgit.com/mrdoob/three.js/a5e8f335639f524986628e6898e13336b4c4903e/build/three.js"></script>
+<!-- r67 -->
+<script src="http://rawgit.com/mrdoob/three.js/a083e4442732f076e85446ca42e5f7a829b7d28b/build/three.js"></script>
 <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenLite.min.js"></script>
 
 <script src="map3d.js"></script>
@@ -143,7 +143,7 @@ function demo(data) {
 	document.getElementById('demo').appendChild(renderer.domElement);
 
 	var globe = new THREE.Object3D ();
-	globe.scale = new THREE.Vector3 (250, 250, 250);
+	globe.scale.set (250, 250, 250);
 	scene.add (globe);
 
 	var geometry = new THREE.SphereGeometry(radius, 30, 15);
