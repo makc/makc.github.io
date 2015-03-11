@@ -40,7 +40,9 @@
 	</style>
 
 	<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+	<script src="http://eligrey.com/demos/FileSaver.js/FileSaver.js"></script>
 	<script src="DynamicBufferGeometry.js"></script>
+	<script src="BinaryBufferGeometry.js"></script>
 
 	<script>
 		function onFile (event) {
@@ -96,6 +98,21 @@
 				new Blob ([ JSON.stringify (json, replacer) ], { type : 'text/plain' })
 			));
 		}
+
+		function exportBinary () {
+			var buffer = geometry.toBinary ();
+
+			/*
+			var g = new THREE.BufferGeometry ();
+			g.fromBinary (buffer);
+
+			console.log (g);
+			*/
+
+			saveAs (
+				new Blob ([ new DataView (buffer) ], { type : 'application/octet-stream' }), 'geometry.bin'
+			);
+		}
 	</script>
 </head>
 <body>
@@ -130,7 +147,7 @@
 						<button type="button" class="btn btn-primary" onclick="exportJSON()">JSON</button>
 					</div>
 					<div class="col-md-6">
-						<button type="button" class="btn btn-primary" onclick="exportBinary()" disabled>Binary</button>
+						<button type="button" class="btn btn-primary" onclick="exportBinary()">Binary</button>
 					</div>
 				</div>
 			</div>
