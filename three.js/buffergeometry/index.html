@@ -1,0 +1,142 @@
+<html>
+<head>
+	<meta charset="utf8" />
+	<title>BufferGeometry util</title>
+
+	<link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" />
+
+	<style type="text/css">
+		#content {
+			padding-top: 15px;
+		}
+
+		#content, #result {
+			width: 75%;
+			margin: 0 auto;
+		}
+
+		#precision {
+			width: 175px;
+		}
+
+		/* extra bootstrap rules */
+		div.panel-primary a {
+			color: white;
+			text-decoration: underline;
+		}
+
+		div.panel-body input {
+			margin-right: 10px;
+		}
+
+		.panel .col-md-6 {
+			text-align: center;
+		}
+
+		label {
+			font-weight: normal;
+		}
+
+	</style>
+
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+	<script src="DynamicBufferGeometry.js"></script>
+
+	<script>
+		function onFile (event) {
+			var files = event.target.files;
+			if (files && files[0]) {
+				var reader = new FileReader ();
+				reader.onload = function (e) {
+					convert (files[0].name, JSON.parse (reader.result));
+				}
+				reader.readAsText(files[0], "UTF-8");
+			}
+		}
+
+		var geometry;
+
+		function convert (name, json) {
+			var loader;
+
+			if (json.metadata.type == 'BufferGeometry') {
+				loader = new THREE.BufferGeometryLoader ();
+				geometry = loader.parse (json.data); // issue 6166 of r70
+			} else {
+				loader = new THREE.JSONLoader ();
+				geometry = loader.parse (json).geometry;
+			}
+
+			if (geometry.type == 'BufferGeometry') {
+				geometry = (new DynamicBufferGeometry ()).merge (geometry); // TODO option to remove attributes
+			} else {
+				geometry = (new DynamicBufferGeometry ()).fromGeometry (geometry);
+			}
+
+			result.style.display = '';
+		}
+
+		function exportJSON () {
+			var json = geometry.toJSON ();
+
+			var replacer = null;
+			if (/^\d$/.test (precision.value)) {
+				var p = parseInt (precision.value);
+				replacer = function (key, value) {
+					return (value.toPrecision && (Math.floor (value) != value)) ? Number (value.toPrecision (p)) : value;
+				};
+			}
+
+			if (stripHeader.checked) {
+				json = json.data;
+				json.metadata = { type: 'BufferGeometry' };
+			}
+
+			window.open (window.URL.createObjectURL (
+				new Blob ([ JSON.stringify (json, replacer) ], { type : 'text/plain' })
+			));
+		}
+	</script>
+</head>
+<body>
+	<div id="content">
+		<div class="panel panel-primary">
+			<div class="panel-heading">Select Geometry or BufferGeometry file to convert:</div>
+			<div class="panel-body">
+				<input autocomplete="off" type="file" onchange="onFile(event)" class="file" />
+			</div>
+		</div>
+	</div>
+	<div id="result" style="display:none;">
+		<div class="panel panel-info">
+			<div class="panel-heading">JSON options:</div>
+			<div class="panel-body">
+				<div class="row">
+					<div class="col-md-6">
+						<label><input autocomplete="off" type="checkbox" id="stripHeader" />Strip header to work around</label>
+						<a href="https://github.com/mrdoob/three.js/issues/6166">issue 6166</a>
+					</div>
+					<div class="col-md-6">
+						Limit numbers precision to <input autocomplete="off" id="precision" placeholder=" leave blank to keep as-is" />
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="panel panel-primary">
+			<div class="panel-heading">Export indexed BufferGeometry:</div>
+			<div class="panel-body">
+				<div class="row">
+					<div class="col-md-6">
+						<button type="button" class="btn btn-primary" onclick="exportJSON()">JSON</button>
+					</div>
+					<div class="col-md-6">
+						<button type="button" class="btn btn-primary" onclick="exportBinary()" disabled>Binary</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/ga.js"></script>
+</body>
+</html>
