@@ -59,12 +59,12 @@
 		function convert (name, json) {
 			var loader;
 
-			if (json.metadata.type == 'BufferGeometry') {
+			if (json.type == 'BufferGeometry') {
 				loader = new THREE.BufferGeometryLoader ();
 				geometry = loader.parse (json.data); // issue 6166 of r70
 			} else {
 				loader = new THREE.JSONLoader ();
-				geometry = loader.parse (json).geometry;
+				geometry = loader.parse (json.data).geometry;
 			}
 
 			if (geometry.type == 'BufferGeometry') {
