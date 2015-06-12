@@ -57,10 +57,10 @@ function DynamicBufferGeometry ( radius ) {
 	var cache = {};
 
 	var pos2key = function ( pos ) {
-		var ix = (pos[0] | 0) + radius;
-		var iy = (pos[1] | 0) + radius;
-		var iz = (pos[2] | 0) + radius;
-		return diameter * (diameter * ix + iy) + iz;
+		var ix = ((pos[0] / radius + 1) * 100) | 0;
+		var iy = ((pos[1] / radius + 1) * 100) | 0;
+		var iz = ((pos[2] / radius + 1) * 100) | 0;
+		return 200 * (200 * ix + iy) + iz;
 	};
 
 	var getVertex = function ( geometry, index ) {
