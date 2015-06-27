@@ -172,7 +172,7 @@ function DynamicBufferGeometry ( radius ) {
 		return this;
 	};
 
-	// folloving overrides prototype.fromGeometry
+	// folloving overrides prototype.fromGeometry FIXME punches random holes in the mesh
 	this.fromGeometry = function ( geometry, settings ) {
 
 		settings = settings || { 'vertexColors': THREE.NoColors };
