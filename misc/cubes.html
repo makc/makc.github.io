@@ -1,0 +1,244 @@
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>Infinite cubes</title>
+	<style>
+		body { margin: 0px; }
+		#shader { position: absolute; left: 9px; top: 9px; width: 250px; }
+		#stats { position: absolute; right: 0px; top: 0px; }
+	</style>
+</head>
+<body>
+	<canvas id="canvas"></canvas>
+	<select id="shader" autocomplete="off">
+		<option selected>Raymarching distance field</option>
+		<option>Iteratively solving for intersections</option>
+	</select>
+
+	<script id="version1" type="x/glsl">
+	//
+	// Infinite cubes by raymarching distance field
+	// Borrows from http://glslsandbox.com/e#27126.0 heavily :)
+	//
+
+	float getDistance (vec3 p) {
+		p = mod (p, 8.0) - 4.0;
+		p = abs (p);
+		return length (max (p - 1.0, 0.0));
+	}
+
+	vec3 getNormal (vec3 p) {
+		const float d = 0.0001;
+		return normalize (vec3 (
+			getDistance (p + vec3 (d, 0.0, 0.0)) - getDistance (p + vec3 (-d, 0.0, 0.0)),
+			getDistance (p + vec3 (0.0, d, 0.0)) - getDistance (p + vec3 (0.0, -d, 0.0)),
+			getDistance (p + vec3 (0.0, 0.0, d)) - getDistance (p + vec3 (0.0, 0.0, -d))
+		));
+	}
+
+	void cubes (out vec3 color, in vec3 camPos, in vec3 rayDir) {
+		float t = 0.0, d;
+		vec3 posOnRay = camPos;
+
+		for (int i = 0; i < 64; i++) {
+			d = getDistance (posOnRay);
+			t += d;
+			posOnRay = camPos + t * rayDir;
+		}
+
+		vec3 normal = getNormal (posOnRay);
+		if (abs (d) < 0.001) {
+			color = normal * 0.5 * (8.0 / t) + 0.5;
+		} else {
+			discard;
+		}
+	}
+	</script>
+
+	<script id="version2" type="x/glsl">
+	//
+	// Infinite cubes by iteratively solving for intersections
+	//
+
+	const float cube_half_side = 1.0, cell_side = 8.0, cube_side = cube_half_side * 2.0;
+
+	void cubes (out vec3 color, in vec3 p, in vec3 d) {
+
+		p = mod (p + cell_side * 0.5, cell_side);
+
+		vec3 ad = abs(d), sd = sign(d), normal = vec3(0.0);
+
+		vec3 offsets = (0.5 * cell_side - cube_half_side) * (sd + 1.0) + cube_half_side; // (d.x > 0.0) ? cell_side - cube_half_side : cube_half_side, etc
+
+		vec2 test;
+
+		float closest_hit_distance = 1e2 * cell_side, ray_distance, step = (cell_side + 1e-2 * cube_half_side) / max (ad.x, max (ad.y, ad.z));
+
+		vec3 p1 = p, p2, dist;
+
+		float p1_to_p_distance = 0.0;
+
+		for (int i = 0; i < 7; i++) {
+
+			// distances to the planes of cubes sides facing the camera
+			dist = (offsets - mod (p1, cell_side)) / d;
+			dist += 0.5 * (1.0 - sign (dist)) * cell_side / ad; // if (dist.x < 0.0) dist.x += cell_side / abs(d.x);
+
+			// x
+			p2 = p1 + d * dist.x;
+
+			ray_distance = p1_to_p_distance + dist.x; //length(p2 - p);
+			if (closest_hit_distance > ray_distance) {
+
+				// test yz
+				test = mod (p2.yz + cube_half_side, cell_side);
+				if ((test.x < cube_side) && (test.y < cube_side)) {
+					closest_hit_distance = ray_distance;
+					normal = vec3 (-sd.x, 0.0, 0.0);
+				}
+			}
+
+			// y
+			p2 = p1 + d * dist.y;
+
+			ray_distance = p1_to_p_distance + dist.y;
+			if (closest_hit_distance > ray_distance) {
+
+				// test xz
+				test = mod (p2.xz + cube_half_side, cell_side);
+				if ((test.x < cube_side) && (test.y < cube_side)) {
+					closest_hit_distance = ray_distance;
+					normal = vec3 (0.0, -sd.y, 0.0);
+				}
+			}
+
+			// z
+			p2 = p1 + d * dist.z;
+
+			ray_distance = p1_to_p_distance + dist.z;
+			if (closest_hit_distance > ray_distance) {
+
+				// test xy
+				test = mod (p2.xy + cube_half_side, cell_side);
+				if ((test.x < cube_side) && (test.y < cube_side)) {
+					closest_hit_distance = ray_distance;
+					normal = vec3 (0.0, 0.0, -sd.z);
+				}
+			}
+
+			p1 += d * step;
+			p1_to_p_distance += step;
+		}
+
+		color = normal * 0.5 * (cell_side / closest_hit_distance) + 0.5;
+	}
+	</script>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r14/Stats.js"></script>
+	<script>
+		var stats = new Stats ();
+		document.body.appendChild (stats.domElement);
+
+		var gl = canvas.getContext ('webgl');
+		var vs = gl.createShader (gl.VERTEX_SHADER);
+		gl.shaderSource (vs, '\n\
+			attribute vec4 position;\n\
+			void main () {\n\
+				gl_Position = position;\n\
+			}'
+		);
+		gl.compileShader (vs);
+
+		var p1 = gl.createProgram (); gl.attachShader(p1, vs);
+		var p2 = gl.createProgram (); gl.attachShader(p2, vs);
+
+		var fsHead = '\n\
+			#ifdef GL_ES\n\
+			precision highp float;\n\
+			#endif\n\
+			uniform vec2 resolution;\n\
+			uniform float time;\n';
+
+		var fsTail = '\n\
+			void main () {\n\
+				vec2 pos = (gl_FragCoord.xy * 2.0 - resolution) / resolution.y;\n\
+				vec3 camPos = vec3 (0.0, 0.0, 3.0) + vec3 (sin (time / 4.0) * 7.1, cos (time / 4.0) * 7.1, (sin (time / 6.0) + cos (time / 2.0)) * 7.0);\n\
+				vec3 camDir = vec3 (0.0, 0.0, -1.0);\n\
+				vec3 camUp = vec3 (0.0, 1.0, 0.0) + vec3 (sin (time / 5.0), 0.0, 0.0);\n\
+				vec3 camSide = cross (camDir, camUp);\n\
+				float focus = 1.8;\n\
+				vec3 rayDir = normalize (camSide * pos.x + camUp * pos.y + camDir * focus);\n\
+				gl_FragColor.w = 1.0;\n\
+				cubes (gl_FragColor.xyz, camPos, rayDir);\n\
+			}';
+
+		var fs1 = gl.createShader (gl.FRAGMENT_SHADER); gl.shaderSource (fs1, fsHead + version1.text + fsTail);
+		gl.compileShader (fs1); gl.attachShader (p1, fs1); console.log (gl.getShaderInfoLog (fs1)); gl.linkProgram (p1);
+		
+		var fs2 = gl.createShader (gl.FRAGMENT_SHADER); gl.shaderSource (fs2, fsHead + version2.text + fsTail);
+		gl.compileShader (fs2); gl.attachShader (p2, fs2); console.log (gl.getShaderInfoLog (fs2)); gl.linkProgram (p2);
+
+		var uniforms1 = {
+			resolution: gl.getUniformLocation (p1, 'resolution'),
+			time: gl.getUniformLocation (p1, 'time')
+		};
+
+		var uniforms2 = {
+			resolution: gl.getUniformLocation (p2, 'resolution'),
+			time: gl.getUniformLocation (p2, 'time')
+		};
+
+		gl.bindBuffer (gl.ARRAY_BUFFER, gl.createBuffer ());
+		gl.bufferData (gl.ARRAY_BUFFER, new Float32Array([
+			-1,	1,	0,	1,
+			-1, -1,	0,	1,
+			 1,	1,	0,	1,
+			 1, -1,	0,	1
+		]), gl.STATIC_DRAW);
+
+		// attribute locations should be the same since we're using the same vertex shader
+		var pl = gl.getAttribLocation (p1, 'position');
+		gl.enableVertexAttribArray (pl); gl.vertexAttribPointer (pl, 4, gl.FLOAT, false, 0, 0);
+
+		gl.clearColor (0.5, 0.5, 0.5, 1);
+
+		var resolution = [];
+		var resize = function () {
+			resolution[0] = canvas.width = window.innerWidth;
+			resolution[1] = canvas.height = window.innerHeight;
+
+			gl.viewport (0, 0, resolution[0], resolution[1]);			
+		};
+
+		window.addEventListener ('resize', resize);
+		resize ();
+
+		var startTime = Date.now (), uniforms;
+		var render = function () {
+			stats.begin ();
+
+			gl.clear (gl.COLOR_BUFFER_BIT);
+			gl.uniform1f (uniforms.time, (Date.now () - startTime) * 1e-3);
+			gl.uniform2fv (uniforms.resolution, resolution);
+			gl.drawArrays (gl.TRIANGLE_STRIP, 0, 4);
+			gl.flush ();
+
+			stats.end ();
+
+			requestAnimationFrame (render);
+		};
+
+		gl.useProgram (p1); uniforms = uniforms1;
+		render ();
+
+		shader.onchange = function () {
+			switch (this.selectedIndex) {
+				case 0: gl.useProgram (p1); uniforms = uniforms1; break;
+				case 1: gl.useProgram (p2); uniforms = uniforms2; break;
+			}
+		};
+	</script>
+
+	<script src="/ga.js"></script>
+</body>
+</html>
