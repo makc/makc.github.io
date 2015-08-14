@@ -72,7 +72,7 @@
 
 		vec2 test;
 
-		float closest_hit_distance = 1e2 * cell_side, ray_distance, step = (cell_side + 1e-2 * cube_half_side) / max (ad.x, max (ad.y, ad.z));
+		float closest_hit_distance = 1e2 * cell_side, ray_distance, step = cell_side / max (ad.x, max (ad.y, ad.z));
 
 		vec3 p1 = p, p2, dist;
 
