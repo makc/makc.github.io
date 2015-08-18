@@ -1,0 +1,318 @@
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<title>Very fast rocket</title>
+	<style>
+		body { margin: 0px; background-color: black; color: white; }
+		input { cursor: pointer; }
+		#scale { position: absolute; left: 40px; bottom: 20px; width: 140px; }
+		#stripes { position: absolute; left: 200px; bottom: 20px; }
+		#tilted { position: absolute; left: 235px; bottom: 20px; }
+		#velocity { position: absolute; right: 40px; bottom: 20px; width: 300px; }
+		#velocity::-moz-range-track { border: 1px solid #777; }
+		#velocityValue { position: absolute; right: 50px; bottom: 40px; font: 40px Arial; font-style: italic; }
+	</style>
+</head>
+<body>
+
+	<select id="scale" title="Grid scale" autocomplete="off">
+		<option value="1">One light second</option>
+		<option value="10" selected>Ten light seconds</option>
+		<option value="60">One light minute</option>
+	</select>
+
+	<input id="stripes" type="checkbox" checked title="Stripes"></input>
+
+	<input id="tilted" type="checkbox" title="Tilted"></input>
+
+	<input id="velocity" type="range" min="0" value="0" max="1" step="0.001" title="Velocity" autocomplete="off"></input><i id="velocityValue">0</i>
+
+	<script id="latticeShader" type="x/glsl">
+
+		uniform float scale;
+
+		// this one is pretty much like http://makc.github.io/misc/cubes.html except it's beams :)
+		void beams (out vec3 color, in vec3 p, in vec3 d) {
+			float beam_half_side = 0.01 * scale, cell_side = scale, beam_side = beam_half_side * 2.0;
+			p = mod (p + cell_side * 0.5, cell_side);
+			vec3 ad = abs(d), sd = sign(d), normal = vec3(0.0);
+			vec3 offsets = (0.5 * cell_side - beam_half_side) * (sd + 1.0) + beam_half_side;
+			vec2 test;
+			float closest_hit_distance = 1e2 * cell_side, ray_distance, step = cell_side / max (ad.x, max (ad.y, ad.z));
+			vec3 p1 = p, p2, dist;
+			float p1_to_p_distance = 0.0;
+			for (int i = 0; i < 10; i++) {
+				dist = (offsets - mod (p1, cell_side)) / d;
+				dist += 0.5 * (1.0 - sign (dist)) * cell_side / ad;
+
+				p2 = p1 + d * dist.x;
+				ray_distance = p1_to_p_distance + dist.x;
+				if (closest_hit_distance > ray_distance) {
+					test = mod (p2.yz + beam_half_side, cell_side);
+					if ((test.x < beam_side) || (test.y < beam_side)) {
+						closest_hit_distance = ray_distance;
+						normal = vec3 (-sd.x, 0.0, 0.0);
+					}
+				}
+
+				p2 = p1 + d * dist.y;
+				ray_distance = p1_to_p_distance + dist.y;
+				if (closest_hit_distance > ray_distance) {
+					test = mod (p2.xz + beam_half_side, cell_side);
+					if ((test.x < beam_side) || (test.y < beam_side)) {
+						closest_hit_distance = ray_distance;
+						normal = vec3 (0.0, -sd.y, 0.0);
+					}
+				}
+
+				p2 = p1 + d * dist.z;
+				ray_distance = p1_to_p_distance + dist.z;
+				if (closest_hit_distance > ray_distance) {
+					test = mod (p2.xy + beam_half_side, cell_side);
+					if ((test.x < beam_side) || (test.y < beam_side)) {
+						closest_hit_distance = ray_distance;
+						normal = vec3 (0.0, 0.0, -sd.z);
+					}
+				}
+
+				p1 += d * step;
+				p1_to_p_distance += step;
+			}
+
+			color = (vec3 (dot (normal, vec3(0.1, 0.2, 0.3))) * 0.5 + 0.5) * (cell_side / closest_hit_distance);
+
+			#ifdef stripes
+			p1 = p + closest_hit_distance * d;
+			color *= mod (floor ((p1.x + p1.y + p1.z) * 4.0), 2.0) * 0.5 + 0.5;
+			#endif
+		}
+
+		uniform float angle;
+
+		// this calculates ray direction in spaceship frame
+		vec3 ray_dir (float fov, vec2 size, vec2 pos) {
+			vec2 xy = pos - 0.5 * size;
+
+			float cot_half_fov = tan ((90.0 - 0.5 * fov) * 0.01745329252);	
+			float z = size.y * 0.5 * cot_half_fov;
+
+			vec3 dir = vec3 (xy, -z);
+			mat3 rot = mat3 (
+				vec3 (cos (angle), 0.0, -sin (angle)),
+				vec3 (        0.0, 1.0,          0.0),
+				vec3 (sin (angle), 0.0,  cos (angle))
+			);
+
+			dir = rot * dir;
+
+			#ifdef tilted
+			dir = vec3 (0.7071*(dir.x + dir.y), 0.7071*(dir.x - dir.y), dir.z);
+			#endif
+
+			return normalize (dir);
+		}
+
+		uniform vec2 resolution;
+		uniform float time;
+		uniform float velocity;
+
+		void main () {
+			// 1st, calculate how much distance did the spaceship travel in its own frame
+			// in units where c = 1 we have:
+			// spaceship time ^2 - 0 ^2 = distant time ^2 - covered distance ^2
+			// and
+			// covered distance = velocity * distant time
+			// ergo...
+			float inverse_root = inversesqrt (1.0 - velocity * velocity);
+			float covered_dist = inverse_root * velocity * time;
+
+			// 2nd, pick the ray in spaceship frame
+			gl_FragColor = vec4 (gl_FragCoord.xy / resolution, 0.0, 1.0);
+			vec3 ray = ray_dir (75.0, resolution, gl_FragCoord.xy);
+
+			// 3rd, transform the ray to distant observer frame (aka Lorentz transformation)
+			// since the ray is normalized, its length divided by c is 1
+			ray.z = inverse_root * (ray.z + velocity);
+
+			beams (gl_FragColor.xyz, vec3 (0.0, 0.0, -covered_dist), normalize (ray));
+		}
+
+	</script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.js"></script>
+	<script src="../three.js/buffergeometry/BinaryBufferGeometry.js"></script>
+	<script>
+		var loader = new THREE.XHRLoader ();
+		loader.setResponseType ('arraybuffer');
+
+		loader.load ('relativity-1/fins.bin', function (response) {
+			var fins = new THREE.BufferGeometry ();
+			fins.fromBinary (response);
+
+			loader.load ('relativity-1/fuselage.bin', function (response) {
+				var fuselage = new THREE.BufferGeometry ();
+				fuselage.fromBinary (response);
+
+				THREE.ImageUtils.loadTexture ('relativity-1/texture.png', THREE.Texture.DEFAULT_MAPPING, function (texture) {
+					texture.magFilter = texture.minFilter = THREE.NearestFilter;
+
+					var material = new THREE.MeshBasicMaterial ({ map: texture });
+
+					var spaceship = new THREE.Object3D ();
+					spaceship.add (new THREE.Mesh (fins, material));
+					spaceship.add (new THREE.Mesh (fuselage, material));
+
+					start (spaceship);
+				});
+			});
+		});
+
+		function start (spaceship) {
+			spaceship.rotation.x = -0.5 * Math.PI;
+			spaceship.rotation.y = 0.25 * Math.PI;
+
+
+			var trail = new THREE.Object3D ();
+			trail.update = function () {
+				for (var t = 0, n = this.children.length; t < n; t++) {
+					this.children[t].visible = (Math.random () < 0.1);
+				}
+			}
+			for (var t = 0, n = 900; t < n; t++) {
+				var particle = new THREE.Sprite (new THREE.SpriteMaterial ({ opacity: 1.0 - Math.sqrt (t / n), rotation: 0.5 * Math.PI }));
+				particle.position.y = -0.003 * t -0.3;
+				particle.position.x = 0.13 * (Math.random () - Math.random ());
+				particle.position.z = 0.13 * (Math.random () - Math.random ());
+				particle.scale.multiplyScalar (0.05 * particle.material.opacity + 0.02);
+				trail.add (particle);
+			}
+			spaceship.add (trail);
+
+
+			window.scene = new THREE.Scene ();
+			scene.add (spaceship);
+
+			var camera = new THREE.PerspectiveCamera (75, 1, 0.01, 10.0);
+			camera.position.y = 2;
+			scene.add (camera);
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			document.body.insertBefore(renderer.domElement, document.body.childNodes[0]);
+
+
+			var uniforms = {
+				angle:      { type:  'f', value: [0] },
+				resolution: { type: '2f', value: [0, 0] },
+				scale:      { type:  'f', value: [10] },
+				time:       { type:  'f', value: [0] },
+				velocity:   { type:  'f', value: [0] }
+			};
+
+
+			var backdrop = new THREE.Mesh (new THREE.PlaneBufferGeometry (1808, 2015), new THREE.ShaderMaterial ({
+				uniforms: uniforms,
+				vertexShader: 'void main () { gl_Position = projectionMatrix * (modelViewMatrix * vec4 (position, 1.0)); }'
+			}));
+
+			backdrop.position.z = -0.9 * camera.far;
+			camera.add (backdrop);
+
+
+			var updateLatticeShader = function () {
+				var defines = '';
+				if (stripes.checked) defines += '#define stripes\n';
+				if (tilted.checked) defines += '#define tilted\n';
+
+				backdrop.material.fragmentShader = defines + latticeShader.textContent;
+				backdrop.material.needsUpdate = true;
+			};
+
+			updateLatticeShader ();
+
+
+			var resize = function () {
+				uniforms.resolution.value[0] = window.innerWidth;
+				uniforms.resolution.value[1] = window.innerHeight;
+
+				renderer.setSize(window.innerWidth, window.innerHeight);
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+			};
+
+			window.addEventListener ('resize', resize, false);
+			resize ();
+
+			var lastT, render = function () {
+
+				uniforms.time.value[0] = 1e-3 * (Date.now () - lastT);
+
+				var angle = uniforms.angle.value[0];
+
+				camera.position.x = 5 * Math.sin (angle);
+				camera.position.z = 5 * Math.cos (angle);
+				camera.rotation.y = angle;
+
+				trail.update ();
+
+				// do a barrel roll
+				spaceship.rotation.y = 4 * Math.sin ((Date.now () % 1e4) * 2e-4 * Math.PI);
+
+				renderer.render (scene, camera);
+
+				requestAnimationFrame (render);
+			};
+
+			lastT = Date.now ();
+			render ();
+
+			var lastX, rotate = function (event) {
+				event.preventDefault ();
+				var clientX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+				uniforms.angle.value[0] += 3e-3 * (clientX - lastX); lastX = clientX;
+			}, down = function (event) {
+				event.preventDefault ();
+				lastX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+				renderer.domElement.addEventListener ('mousemove', rotate);
+				renderer.domElement.addEventListener ('touchmove', rotate);
+			}, up = function (event) {
+				event.preventDefault ();
+				renderer.domElement.removeEventListener ('mousemove', rotate);
+				renderer.domElement.removeEventListener ('touchmove', rotate);
+			};
+
+			renderer.domElement.addEventListener ('mousedown', down);
+			renderer.domElement.addEventListener ('mouseleave', up);
+			renderer.domElement.addEventListener ('mouseup', up);
+
+			renderer.domElement.addEventListener ('touchstart', down);
+			renderer.domElement.addEventListener ('touchcancel', up);
+			renderer.domElement.addEventListener ('touchleave', up);
+			renderer.domElement.addEventListener ('touchend', up);
+
+
+			// controls
+
+			velocity.oninput = function () {
+				// map 0 .. 1 to 0 .. ~0.95 with more detail in upper end
+				uniforms.velocity.value[0] = (1 - Math.exp (-Math.pow (velocity.value, 0.7))) / 0.665;
+
+				var string = uniforms.velocity.value[0].toPrecision (2);
+				if (string.substr (-1) == '0') string = string.substr (0, string.length - 1);
+				if (string.substr (-1) == '.') string = string.substr (0, string.length - 1);
+				if (string.length > 1) string += 'c'; velocityValue.textContent = string;
+			};
+
+			scale.onchange = function () {
+				uniforms.scale.value[0] = parseFloat (scale.value);
+			};
+
+			stripes.onchange = updateLatticeShader;
+			tilted.onchange = updateLatticeShader;
+
+		}
+	</script>
+
+	<script src="/ga.js"></script>
+</body>
+</html>
