@@ -1,0 +1,64 @@
+<html>
+<head>
+	<style>
+		body { margin: 0; overflow: hidden; }
+		#progress { position: absolute; top: 60%; left: 20%; right: 20%; height: 5px; background-color: #eee; }
+		#progress div { width: 1%; height: 100%; background-color: #37f; }
+	</style>
+</head>
+<body>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js"></script>
+
+	<script src="OBJLoader.js"></script>
+	<script src="OrbitControls.js"></script>
+	<script src="load.js"></script>
+
+	<script src="matcap.js"></script>
+
+	<div id="progress"><div></div></div>
+
+	<script>
+
+	function assignMaterials (object) {
+		if (object.material) {
+			if (object.name == 'Ring') {
+				object.material = makeMatCapMaterial ('../map2globe/gold.jpg');
+				object.material.addEventListener ('ready', function () {
+					document.getElementById ('progress').style.display = 'none';
+					obj.dispatchEvent ({ type: 'render' });
+				});
+			} else {
+				object.material.shading = THREE.FlatShading;
+				object.material.color.setHex (0x3f7fff);
+			}
+		}
+
+		if (object.type == 'PerspectiveCamera') {
+			object.position.z *= -0.6;
+			object.position.y = object.position.z * 0.6;
+			object.position.x = object.position.z * 0.27;
+			object.lookAt (new THREE.Vector3);
+		}
+	}
+
+	var obj = loadFile ('ring.obj', assignMaterials, document.body);
+
+	obj.addEventListener ('progress', function (event) {
+		document.querySelector ('#progress div').style.width = Math.round (100 * event.loaded / event.total) + '%';
+	});
+
+	obj.addEventListener ('ready', function () {
+
+		var resize = function () {
+			obj.dispatchEvent ({
+				type: 'resize', width: window.innerWidth, height: window.innerHeight
+			});
+		};
+
+		window.addEventListener ('resize', resize);
+		resize ();
+	});
+
+	</script>
+</body>
+</html>
