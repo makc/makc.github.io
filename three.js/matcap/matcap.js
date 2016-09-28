@@ -1,4 +1,4 @@
-function makeMatCapMaterial (map, texture) {
+function makeMatCapMaterial (map, texture, normalMap) {
 
 	var manager = new THREE.LoadingManager (function () {
 		material.dispatchEvent ({
@@ -17,7 +17,13 @@ function makeMatCapMaterial (map, texture) {
 	if (texture) {
 		defines = '#define TEXTURE';
 		uniforms.texture = {
-			type: 't', value : loader.load (texture)
+			type : 't', value : loader.load (texture)
+		}
+		if (normalMap) {
+			defines += '\n#define NORMAL_MAP';
+			uniforms.normalMap = {
+				type : 't', value : loader.load (normalMap)
+			}
 		}
 	} else {
 		uniforms.color = {
@@ -55,6 +61,9 @@ function makeMatCapMaterial (map, texture) {
 			uniform sampler2D map;\n\
 			#ifdef TEXTURE\n\
 				uniform sampler2D texture;\n\
+				#ifdef NORMAL_MAP\n\
+					uniform sampler2D normalMap;\n\
+				#endif\n\
 				varying vec2 vUv;\n\
 			#else\n\
 				uniform vec4 color;\n\
@@ -63,13 +72,17 @@ function makeMatCapMaterial (map, texture) {
 			varying vec2 vN;\n\
 			\n\
 			void main () {\n\
+				vec2 n = vN;\n\
 				#ifdef TEXTURE\n\
 					vec4 color = texture2D (texture, vUv);\n\
+					#ifdef NORMAL_MAP\n\
+					n = pow (n, 2.0 * texture2D (normalMap, vUv).xy);\n\
+					#endif\n\
 				#endif\n\
-				//gl_FragColor = texture2D (map, vN) * color;\n\
+				//gl_FragColor = texture2D (map, n) * color;\n\
 				float b = 0.2; // black bias\n\
 				float a = 3.0 * (0.5 - b); // so that ∫ (ax² + b - x) dx from 0 to 1 is 0\n\
-				gl_FragColor = texture2D (map, vN) * (a * color * color + b);\n\
+				gl_FragColor = texture2D (map, n) * (a * color * color + b);\n\
 			}',
 		uniforms : uniforms
 	});
