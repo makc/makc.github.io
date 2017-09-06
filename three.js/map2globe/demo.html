@@ -10,6 +10,7 @@
 		#demo {
 			width: 100%;
 			height: 100%;
+			overflow: hidden;
 			position: relative;
 		}
 		#demo > canvas {
@@ -33,6 +34,37 @@
 		.panel-heading {
 			padding: 6px 12px;
 		}
+
+		#demo .balloon {
+			position: absolute;
+			color: #8a6d3b;
+			background-color: #fcf8e3;
+			border-radius: 4px;
+			border: 1px solid #faebcc;
+			font-family: sans-serif;
+			line-height: 1;
+			width: 200px;
+			height: 90px;
+			padding: 10px 0 0 0;
+		}
+
+		#demo .balloon .text {
+			overflow: hidden;
+			white-space: nowrap;
+			width: 180px;
+			margin-left: 10px;
+			height: 79px;
+		}
+
+		#demo .balloon .arrow {
+			left: 40px;
+			border-width: 10px 10px 0px;
+			border-color: #faebcc transparent transparent;
+			position: absolute;
+			width: 0px;
+			height: 0px;
+			border-style: solid;
+		}
 	</style>
 </head>
 <body>
@@ -54,7 +86,7 @@
 </div>
 
 <!-- r67 -->
-<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>
 <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenLite.min.js"></script>
 
 <script src="map3d.js"></script>
@@ -63,16 +95,16 @@
 varying vec2 vN;
 
 void main() {
-    vec4 p = vec4( position, 1. );
+	vec4 p = vec4( position, 1. );
 
-    vec3 e = normalize( vec3( modelViewMatrix * p ) );
-    vec3 n = normalize( normalMatrix * normal );
+	vec3 e = normalize( vec3( modelViewMatrix * p ) );
+	vec3 n = normalize( normalMatrix * normal );
 
-    vec3 r = reflect( e, n );
-    float m = 2. * length( vec3( r.xy, r.z + 1. ) );
-    vN = r.xy / m + .5;
+	vec3 r = reflect( e, n );
+	float m = 2. * length( vec3( r.xy, r.z + 1. ) );
+	vN = r.xy / m + .5;
 
-    gl_Position = projectionMatrix * modelViewMatrix * p;
+	gl_Position = projectionMatrix * modelViewMatrix * p;
 }
 </script>
 
@@ -82,8 +114,8 @@ uniform sampler2D tMatCap;
 varying vec2 vN;
 
 void main() {
-    vec3 base = texture2D( tMatCap, vN ).rgb;
-    gl_FragColor = vec4( base, 1. );
+	vec3 base = texture2D( tMatCap, vN ).rgb;
+	gl_FragColor = vec4( base, 1. );
 }
 </script>
 
@@ -92,15 +124,15 @@ function makeEnvMapMaterial(file) {
 	// http://www.clicktorelease.com/blog/creating-spherical-environment-mapping-shader
 	// for improved version of this shader, visit http://makc.github.io/three.js/matcap/
 	var material = new THREE.ShaderMaterial({
-	    uniforms: { 
-	        tMatCap: { 
-	            type: 't', 
-	            value: THREE.ImageUtils.loadTexture( file ) 
-	        },
-	    },
-	    vertexShader: document.getElementById( "sem-vs" ).textContent,
-	    fragmentShader: document.getElementById( "sem-fs" ).textContent,
-	    shading: THREE.SmoothShading
+		uniforms: { 
+			tMatCap: { 
+				type: 't', 
+				value: THREE.ImageUtils.loadTexture( file ) 
+			},
+		},
+		vertexShader: document.getElementById( "sem-vs" ).textContent,
+		fragmentShader: document.getElementById( "sem-fs" ).textContent,
+		shading: THREE.SmoothShading
 	});
 
 	material.uniforms.tMatCap.value.wrapS = 
@@ -137,11 +169,76 @@ function demo(data) {
 	}
 	renderer.setClearColor(0xffffff);
 
-	document.getElementById('demo').appendChild(renderer.domElement);
+	var container = document.getElementById('demo');
+	container.appendChild(renderer.domElement);
+
+
+	function Balloon( html ) {
+		THREE.Object3D.call( this );
+		
+		this.popup = document.createElement( 'div' );
+		this.popup.classList.add( 'balloon' );
+		this.popup.innerHTML = html;
+		
+		this.addEventListener( 'added', (function () {
+			container.appendChild( this.popup );
+		}).bind( this ));
+		
+		this.addEventListener( 'removed', (function () {
+			container.removeChild( this.popup );
+		}).bind( this ));
+	}
+
+	Balloon.prototype = Object.create( THREE.Object3D.prototype );
+	Balloon.prototype.constructor = Balloon;
+
+	Balloon.prototype.updateMatrixWorld = (function () {
+		var screenVector = new THREE.Vector3 ();
+		var raycaster = new THREE.Raycaster ();
+
+		return function( force ) {
+			THREE.Object3D.prototype.updateMatrixWorld.call( this, force );
+
+			screenVector.set( 0, 0, 0 ); this.localToWorld( screenVector );
+			
+			raycaster.ray.direction.copy( screenVector );
+
+			raycaster.ray.origin.set( 0, 0, 0 ); camera.localToWorld( raycaster.ray.origin );
+			raycaster.ray.direction.sub( raycaster.ray.origin );
+			
+			var distance = raycaster.ray.direction.length();
+			raycaster.ray.direction.normalize();
+			
+			var intersections = raycaster.intersectObject( scene, true );
+			if( intersections.length && ( intersections[0].distance < distance )) {
+				
+				// overlay anchor is obscured
+				this.popup.style.display = 'none';
+				
+			} else {
+				
+				// overlay anchor is visible
+				screenVector.project( camera );
+				
+				this.popup.style.display = '';
+				this.popup.style.left = Math.round((screenVector.x + 1) * container.offsetWidth / 2 - 50) + 'px';
+				this.popup.style.top = Math.round((1 - screenVector.y) * container.offsetHeight / 2 - 100) + 'px';
+			}
+		};
+	}) ();
+
 
 	var globe = new THREE.Object3D ();
 	globe.scale.set (250, 250, 250);
 	scene.add (globe);
+
+	var label = new Balloon(
+		'<div class="text">' +
+			'<br /><br /><div style="text-align: center; width: 100%">Click for country info :)</div>'
+		+ '</div>'
+		+ '<div class="arrow"></div>' );
+	label.position.set( 1e-3, 1, 1e-3 );
+	globe.add( label );
 
 	var geometry = new THREE.SphereGeometry(radius, 30, 15);
 	globe.add (new THREE.Mesh (geometry, blue));
@@ -149,6 +246,7 @@ function demo(data) {
 	for (var name in data) {
 		geometry = new Map3DGeometry (data[name], 0);
 		globe.add (data[name].mesh = new THREE.Mesh (geometry, gold));
+		data[name].mesh.name = name;
 	}
 
 	showGDP = function () {
@@ -166,13 +264,13 @@ function demo(data) {
 	}
 
 	var resize = function () {
-    	var w = renderer.domElement.parentElement.clientWidth;
-    	var h = renderer.domElement.parentElement.clientHeight;
-        // notify the renderer of the size change
-        renderer.setSize(w, h);
-        // update the camera
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
+		var w = renderer.domElement.parentElement.clientWidth;
+		var h = renderer.domElement.parentElement.clientHeight;
+		// notify the renderer of the size change
+		renderer.setSize(w, h);
+		// update the camera
+		camera.aspect = w / h;
+		camera.updateProjectionMatrix();
 	};
 
 	var render = function () {
@@ -185,6 +283,45 @@ function demo(data) {
 
 	resize();
 	render();
+
+
+	renderer.domElement.addEventListener('click', function (event) {
+		var raycaster = new THREE.Raycaster ();
+
+		raycaster.ray.origin.set (0, 0, 0);
+		camera.localToWorld (raycaster.ray.origin);
+		raycaster.ray.direction.set (
+			(event.clientX / window.innerWidth) * 2 - 1, 1 - 2 * (event.clientY / window.innerHeight),
+		0.5).unproject (camera).sub (raycaster.ray.origin).normalize ();
+
+		var intersects = raycaster.intersectObject (scene, true);
+		if (intersects && intersects[0]) {
+
+			var mesh = intersects[0].object;
+			if (mesh.name) {
+
+				var point = intersects[0].point;
+				mesh.worldToLocal (point);
+
+				var gdp = data[mesh.name].data.gdp, debt = 'n/a';
+				if (gdp) {
+					debt = data[mesh.name].data.debt;
+					if (debt) {
+						debt = '$' + Math.floor (gdp * debt / 100);
+					} else {
+						debt = 'n/a';
+					}
+					gdp = '$' + Math.floor (gdp) + ' (' + data[mesh.name].data.gdpYear + ')';
+				} else {
+					gdp = 'n/a'
+				}
+
+				document.querySelector ('#demo .balloon .text').innerHTML = mesh.name + '<br /><br />GDP: ' + gdp + '<br />Debt: ' + debt;
+
+				label.position.copy (point).normalize ().multiplyScalar (1.005); mesh.add (label);
+			}
+		}
+	});
 }
 </script>
 <script src="demo.js"></script>
