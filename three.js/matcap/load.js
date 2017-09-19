@@ -88,6 +88,8 @@ function loadFile (url, process, container) {
 
 				dispatcher.dispatchEvent ({
 					type: 'click',
+					object: intersects[0].object,
+					normal: intersects[0].face.normal,
 					point: intersects[0].point
 				});
 			}
