@@ -1,0 +1,276 @@
+<html>
+<head>
+	<meta charset="utf8" />
+	<title>Pythagoras tree</title>
+
+	<style type="text/css">
+		* { margin: 0; }
+		body { background-color: black; overflow: hidden; }
+	</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
+<script src="../matcap/OrbitControls.js"></script>
+<script>
+	var renderer = new THREE.WebGLRenderer;// ({ antialias: true });
+	document.body.appendChild (renderer.domElement);
+
+	var	scene = new THREE.Scene ();
+	var camera = new THREE.PerspectiveCamera (50, 1, 0.1, 100); camera.position.z = 7;
+
+	var controls = new THREE.OrbitControls (camera, renderer.domElement);
+	controls.target.y = -2; controls.update ();
+	controls.enableKeys = false;
+
+
+	function resize () {
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+		
+		camera.aspect = width / height;
+		camera.updateProjectionMatrix ();
+		renderer.setSize (width, height);
+	}
+	
+	window.addEventListener ('resize', resize);
+	
+	resize ();
+
+
+	// base matrices of the tree
+
+	var matrices = [ new THREE.Matrix4, new THREE.Matrix4, new THREE.Matrix4 ];
+
+
+	// code to calculate the tree
+	// ported from https://makc.github.io/wonderfl/#4pjs
+
+	var updateMatrix = (function () {
+		THREE.Vector3.prototype.transform = function (m) {
+			var x = this.x, y = this.y, z = this.z, e = m.elements;
+			this.x = e[0] * x + e[4] * y + e[ 8] * z + e[12];
+			this.y = e[1] * x + e[5] * y + e[ 9] * z + e[13];
+			this.z = e[2] * x + e[6] * y + e[10] * z + e[14];
+			return this;
+		};
+
+		var atA = new THREE.Vector3, ltA = new THREE.Vector3, upA = new THREE.Vector3;
+		var atB = new THREE.Vector3, ltB = new THREE.Vector3, upB = new THREE.Vector3;
+		var atC = new THREE.Vector3, ltC = new THREE.Vector3, upC = new THREE.Vector3;
+		var atD = new THREE.Vector3, ltD = new THREE.Vector3, upD = new THREE.Vector3;
+		var ltE = new THREE.Vector3 (-1, 0, 0), upE = new THREE.Vector3 (0, -1, 0);
+
+		var lxuD = new THREE.Vector3, lxuE = new THREE.Vector3;
+		var matD = new THREE.Matrix4, matE = new THREE.Matrix4;
+
+		return function (time) {
+
+			var c1 = time, c2 = time;
+
+			// using c1 and c2 in 0..1 range, select such a, b, c and d that a^2 + b^2 + c^2 = d^2
+			// this choise is almost completely free (we only need to make sure that d != 0)
+			var a = 0.1 + c1, c = 1.1 - c1; // +
+			var b = ((c2 > 0.5) ? (c2 - 0.49) : (c2 - 0.51)) * 2; // + or -
+			var d = Math.sqrt (a * a + b * b + c * c); // +
+
+			// define corresponding tree elements in some convenient frame
+			// we are constrained by Pythagoras theorem, but orientation of planes is arbitrary
+			// additionally, we want our tree to coincide with 2D one in boundary case of b = 0
+			atA.x = +a/2; atA.y = 0; atA.z = -a/2;
+			ltA.x = +a/2; ltA.y = 0; ltA.z =  0;
+			upA.x =  0;   upA.y = 0; upA.z = -a/2;
+
+			atC.x = -c/2; atC.y = b; atC.z = +c/2;
+			ltC.x =  0;   ltC.y = 0; ltC.z = -c/2;
+			upC.x = -c/2; upC.y = 0; upC.z =  0;
+
+			atD.x = +a/2; atD.y = +b/2; atD.z = +c/2;
+			ltD.x = +a/2; ltD.y = -b/2; ltD.z = -c/2;
+			upD.x = -c; upD.y = 0; upD.z = -a; upD.normalize (); upD.multiplyScalar (ltD.length ());
+			atD.sub (upD);
+
+			ltB.x = 0; ltB.y = -b/2; ltB.z = 0;
+			upB.copy (upD); upB.normalize (); upB.multiplyScalar (Math.abs (b/2));
+			atB.copy (upB); atB.y = +b/2;
+
+			// find transformation that aligns D element with 2x2 plane frame (E)
+			lxuD.crossVectors (ltD, upD); lxuD.normalize (); lxuD.multiplyScalar (ltD.length ());
+			matD.set (
+				-ltD.x, -upD.x, lxuD.x, 0,
+				-ltD.y, -upD.y, lxuD.y, 0,
+				-ltD.z, -upD.z, lxuD.z, 0,
+				     0,      0,      0, 1
+			);
+
+			lxuE.crossVectors (ltE, upE);
+			matE.set (
+				-ltE.x, -upE.x, lxuE.x, 0,
+				-ltE.y, -upE.y, lxuE.y, 0,
+				-ltE.z, -upE.z, lxuE.z, 0,
+				     0,      0,      0, 1
+			);
+
+			matD.getInverse (matD); matD.multiply (matE);
+
+			// transform A, B and C elements
+			atA.sub (atD); atA.transform (matD); ltA.transform (matD); upA.transform (matD);
+			atB.sub (atD); atB.transform (matD); ltB.transform (matD); upB.transform (matD);
+			atC.sub (atD); atC.transform (matD); ltC.transform (matD); upC.transform (matD);
+
+			// finally, calculate corresponding matrices (re-using lxuE variable)
+			lxuE.crossVectors (ltA, upA).normalize ().multiplyScalar (ltA.length ());
+			matrices[0].set (
+				-ltA.x, -upA.x, lxuE.x, atA.x,
+				-ltA.y, -upA.y, lxuE.y, atA.y,
+				-ltA.z, -upA.z, lxuE.z, atA.z,
+				     0,      0,      0,     1
+			);
+
+			lxuE.crossVectors (ltB, upB).normalize ().multiplyScalar (ltB.length ());
+			matrices[1].set (
+				-ltB.x, -upB.x, lxuE.x, atB.x,
+				-ltB.y, -upB.y, lxuE.y, atB.y,
+				-ltB.z, -upB.z, lxuE.z, atB.z,
+				     0,      0,      0,     1
+			);
+
+			lxuE.crossVectors (ltC, upC).normalize ().multiplyScalar (ltC.length ());
+			matrices[2].set (
+				-ltC.x, -upC.x, lxuE.x, atC.x,
+				-ltC.y, -upC.y, lxuE.y, atC.y,
+				-ltC.z, -upC.z, lxuE.z, atC.z,
+				     0,      0,      0,     1
+			);
+		}
+	}) ();
+
+
+	// the pool of virtual objects to build the scene from
+
+	var pool = (new Uint8Array (5000) + '').split (',').map (function () {
+		var object = new THREE.Object3D;
+		object.matrixAutoUpdate = false;
+		return object;
+	});
+
+
+	// actual geomertry
+
+	var template = new THREE.PlaneBufferGeometry (2, 2);
+	var geometry = new THREE.InstancedBufferGeometry;
+	geometry.index = template.index;
+	geometry.attributes.normal   = template.attributes.normal;
+	geometry.attributes.position = template.attributes.position;
+	geometry.attributes.uv       = template.attributes.uv;
+
+	geometry.addAttribute ('mcol0', new THREE.InstancedBufferAttribute (
+		new Float32Array (pool.length * 3), 3, 1
+	));
+	geometry.addAttribute ('mcol1', new THREE.InstancedBufferAttribute (
+		new Float32Array (pool.length * 3), 3, 1
+	));
+	geometry.addAttribute ('mcol2', new THREE.InstancedBufferAttribute (
+		new Float32Array (pool.length * 3), 3, 1
+	));
+	geometry.addAttribute ('mcol3', new THREE.InstancedBufferAttribute (
+		new Float32Array (pool.length * 3), 3, 1
+	));
+
+
+	// uber dope shader
+
+	scene.add (new THREE.Mesh (geometry, new THREE.RawShaderMaterial ({
+		vertexShader : 'precision highp float;\n\
+			\n\
+			uniform mat4 modelViewMatrix;\n\
+			uniform mat4 projectionMatrix;\n\
+			\n\
+			attribute vec3 position;\n\
+			attribute vec2 uv;\n\
+			attribute vec3 mcol0;\n\
+			attribute vec3 mcol1;\n\
+			attribute vec3 mcol2;\n\
+			attribute vec3 mcol3;\n\
+			\n\
+			varying vec2 vUv;\n\
+			varying float vS;\n\
+			void main () {\n\
+				vUv = uv;\n\
+				vS = mcol0.x;\n\
+				\n\
+				mat4 matrix = mat4 (\n\
+					vec4 (mcol0, 0),\n\
+					vec4 (mcol1, 0),\n\
+					vec4 (mcol2, 0),\n\
+					vec4 (mcol3, 1) \n\
+				);\n\
+				\n\
+				gl_Position = projectionMatrix * (modelViewMatrix * matrix * vec4 (position, 1.0));\n\
+			}',
+		fragmentShader : 'precision highp float;\n\
+			uniform sampler2D map;\n\
+			varying vec2 vUv;\n\
+			varying float vS;\n\
+			void main () {\n\
+				vec4 pixel = texture2D (map, vUv);\n\
+				pixel.rb *= vS;\n\
+				//if (pixel.a < 0.7) discard;\n\
+				gl_FragColor = vec4 (pixel.rgb, 1.0);\n\
+			}',
+		uniforms : {
+			map : { type : 't', value : (new THREE.TextureLoader).load ('bosman.jpg') }
+		},
+		side : THREE.DoubleSide
+	})));
+
+
+
+	function animateTree (time) {
+		updateMatrix (time);
+
+		pool.forEach (function (object) { if (object.parent) object.parent.remove (object); });
+
+		var queue = [pool[0]], i, j, k = 1;
+		while (k < pool.length) {
+			var queue2 = [], i, j;
+			for (i = 0; i < queue.length; i++) {
+				queue[i].updateMatrixWorld (true);
+// TODO proper small scale exit condition - ??
+if (!queue2.length || queue[i].matrixWorld.elements[0] > 0.0001)
+				for (j = 0; j < 3; j++) if (pool[k]) {
+					pool[k].matrix.copy (matrices[j]);
+					queue[i].add (pool[k]); queue2.push (pool[k]); k++;
+				}
+			}
+			queue = queue2;
+		}
+
+// TODO do we need dynamic = true ??
+		var mcol0 = geometry.attributes.mcol0; mcol0.dynamic = mcol0.needsUpdate = true;
+		var mcol1 = geometry.attributes.mcol1; mcol1.dynamic = mcol1.needsUpdate = true;
+		var mcol2 = geometry.attributes.mcol2; mcol2.dynamic = mcol2.needsUpdate = true;
+		var mcol3 = geometry.attributes.mcol3; mcol3.dynamic = mcol3.needsUpdate = true;
+
+		for (k--; k >= 0; k--) {
+			var me = pool[k].matrixWorld.elements;
+			mcol0.setXYZ (k, me[ 0], me[ 1], me[ 2]);
+			mcol1.setXYZ (k, me[ 4], me[ 5], me[ 6]);
+			mcol2.setXYZ (k, me[ 8], me[ 9], me[10]);
+			mcol3.setXYZ (k, me[12], me[13], me[14]);
+		}
+	}
+
+	function animate () {
+		var T = 5;
+		animateTree ((Date.now () % (T * 1000)) * (0.001 / T));
+
+		renderer.render (scene, camera);
+		requestAnimationFrame (animate);
+	}
+
+	animate ();
+
+</script>
+<script src="/ga.js"></script>
+</body>
+</html>
