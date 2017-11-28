@@ -69,8 +69,8 @@
 
 			// using c1 and c2 in 0..1 range, select such a, b, c and d that a^2 + b^2 + c^2 = d^2
 			// this choise is almost completely free (we only need to make sure that d != 0)
-			var a = 0.1 + c1, c = 1.1 - c1; // +
-			var b = ((c2 > 0.5) ? (c2 - 0.49) : (c2 - 0.51)) * 2; // + or -
+			var a = 0.001 + c1, c = 1.001 - c1; // +
+			var b = ((c2 > 0.5) ? (c2 - 0.499) : (c2 - 0.501)) * 2; // + or -
 			var d = Math.sqrt (a * a + b * b + c * c); // +
 
 			// define corresponding tree elements in some convenient frame
@@ -224,6 +224,7 @@
 	})));
 
 
+	// animate
 
 	function animateTree (time) {
 		updateMatrix (time);
@@ -231,25 +232,42 @@
 		pool.forEach (function (object) { if (object.parent) object.parent.remove (object); });
 
 		var queue = [pool[0]], i, j, k = 1;
-		while (k < pool.length) {
+		while (queue.length && (k < pool.length)) {
 			var queue2 = [], i, j;
 			for (i = 0; i < queue.length; i++) {
 				queue[i].updateMatrixWorld (true);
-// TODO proper small scale exit condition - ??
-if (!queue2.length || queue[i].matrixWorld.elements[0] > 0.0001)
-				for (j = 0; j < 3; j++) if (pool[k]) {
-					pool[k].matrix.copy (matrices[j]);
-					queue[i].add (pool[k]); queue2.push (pool[k]); k++;
+
+				var e = queue[i].matrixWorld.elements;
+				// matrixAutoUpdate is off, position and scale properties are unused
+				var v = queue[i].position;
+				// scale estimation code is borrowed from Matrix4.prototype.decompose
+				queue[i].scale.x = v.set (e[0], e[1], e[ 2]).length ();
+				queue[i].scale.y = v.set (e[4], e[5], e[ 6]).length ();
+				queue[i].scale.z = v.set (e[8], e[9], e[10]).length ();
+
+				if (queue[i].scale.lengthSq () > 0.002) {
+					for (j = 0; j < 3; j++) if (pool[k]) {
+						pool[k].matrix.copy (matrices[j]);
+						queue[i].add (pool[k]); queue2.push (pool[k]); k++;
+					}
 				}
 			}
 			queue = queue2;
 		}
 
-// TODO do we need dynamic = true ??
 		var mcol0 = geometry.attributes.mcol0; mcol0.dynamic = mcol0.needsUpdate = true;
 		var mcol1 = geometry.attributes.mcol1; mcol1.dynamic = mcol1.needsUpdate = true;
 		var mcol2 = geometry.attributes.mcol2; mcol2.dynamic = mcol2.needsUpdate = true;
 		var mcol3 = geometry.attributes.mcol3; mcol3.dynamic = mcol3.needsUpdate = true;
+
+		for (i = k; i < pool.length; i++) {
+			mcol0.setXYZ (i, 0, 0, 0);
+			mcol1.setXYZ (i, 0, 0, 0);
+			mcol2.setXYZ (i, 0, 0, 0);
+			mcol3.setXYZ (i, 0, 0, 0);
+		}
+
+		pool[0].updateMatrixWorld (true);
 
 		for (k--; k >= 0; k--) {
 			var me = pool[k].matrixWorld.elements;
