@@ -30,7 +30,7 @@
 	function assignMaterials (object) {
 		if (object.material) {
 			if (object.name == 'Ring') {
-				object.material = makeMatCapMaterial ('../map2globe/gold.jpg');
+				object.material = makeMatCapMaterial ('gold.jpg');
 			} else {
 				object.material = makeDiamondMaterial ();
 				object.material.shading = THREE.FlatShading;
