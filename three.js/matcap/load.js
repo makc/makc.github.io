@@ -5,6 +5,7 @@ function loadFile (url, process, container) {
 
 		var renderer = new THREE.WebGLRenderer ({ antialias: true });
 		renderer.setClearColor (0xffffff);
+		renderer.setClearAlpha (0);
 		container.appendChild (renderer.domElement);
 
 		// center the group
