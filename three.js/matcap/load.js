@@ -3,7 +3,7 @@ function loadFile (url, process, container) {
 
 	(new THREE.OBJLoader).load (url, function (group) {
 
-		var renderer = new THREE.WebGLRenderer ({ antialias: true });
+		var renderer = new THREE.WebGLRenderer ({ antialias: true, alpha: true });
 		renderer.setClearColor (0xffffff);
 		renderer.setClearAlpha (0);
 		container.appendChild (renderer.domElement);
