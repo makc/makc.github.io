@@ -42,7 +42,7 @@ var makeDiamondMaterial = (function () {
 				varying vec3 r;\n\
 				\n\
 				void main () {\n\
-					gl_FragColor = textureCube (map, r - 1.5 * n) * 0.7 + textureCube (map, r - 0.8 * n) * 2.0 + vec4 (-0.2, 0.0, 0.6 * n.y, 0.0);\n\
+					gl_FragColor = textureCube (map, r - 1.5 * n) * 0.4 + textureCube (map, r - 0.8 * n) * 1.5 + vec4 (-0.1 - 0.4 * n.x, 0.0, 0.4 * n.y, 0.0);\n\
 				}',
 			uniforms : {
 				map  : {
