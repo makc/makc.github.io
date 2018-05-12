@@ -10,7 +10,7 @@ var makeDiamondMaterial = (function () {
 
 		texture.needsUpdate = true;
 
-		material.dispatchEvent ({
+		material && material.dispatchEvent ({
 			type : 'ready'
 		});
 	});
@@ -29,11 +29,11 @@ var makeDiamondMaterial = (function () {
 				void main () {\n\
 					vec4 p = vec4 (position, 1.0);\n\
 					\n\
-					vec3 e = normalize (vec3 (modelViewMatrix * p));\n\
+					vec4 e = modelViewMatrix * p;\n\
 					n = normalize (normalMatrix * normal);\n\
-					r = reflect (e, n);\n\
+					r = reflect (normalize (vec3 (e)), n);\n\
 					\n\
-					gl_Position = projectionMatrix * modelViewMatrix * p;\n\
+					gl_Position = projectionMatrix * e;\n\
 				}',
 			fragmentShader : '\n\
 				uniform samplerCube map;\n\
