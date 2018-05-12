@@ -32,6 +32,7 @@
 			if (object.name == 'Ring') {
 				object.material = makeMatCapMaterial ('gold.jpg');
 			} else {
+				object.geometry.computeVertexNormals ();
 				object.material = makeDiamondMaterial ();
 				object.material.shading = THREE.FlatShading;
 			}
