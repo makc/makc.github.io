@@ -1,70 +1,32 @@
 <html>
 <head>
+	<title>🚗</title>
 	<meta charset="UTF-8" />
-	<title>💍</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	<style>
-		body { margin: 0; overflow: hidden; background-color: #010; }
+		html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-image:
+			/*linear-gradient(0deg, #979 0%, #c9c 100%);*/
+			/*linear-gradient(0deg, #212 0%, #434 100%);*/
+			linear-gradient(0deg, #131013 0%, #363036 100%);
+		}
+		a.material { position: absolute; right: 40px; display: block; width: 40px; height: 42px;
+			background-position: 0 100%; background-size: 100% 150%;
+			border: 3px solid white; border-radius: 100%;
+			opacity: 0.5; transition: opacity 0.4s; }
+		a.material:hover, a.material:active { opacity: 1; }
+		a.material.gold { top:  40px; background-image: radial-gradient(circle, #863 42%, #740 45%); border-color: #ed9; }
+		a.material.grey { top: 130px; background-image: radial-gradient(circle, #ddd 42%, #999 45%); }
+		a.material.pink { top: 220px; background-image: radial-gradient(circle, #fcc 42%, #e98 45%); border-color: #fee; }
 		#progress { position: absolute; top: 60%; left: 20%; right: 20%; height: 5px; background-color: rgba(200,200,100,0.2); }
-		#progress div { width: 1%; height: 100%; background-color: #37f; }
+		#progress div { width: 1%; height: 100%; background-color: #a66; }
 	</style>
 </head>
 <body>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js"></script>
-
-	<script src="OBJLoader.js"></script>
-	<script src="OrbitControls.js"></script>
-	<script src="load.js"></script>
-
-	<script src="matcap.js"></script>
-	<script src="diamond.js"></script>
-
 	<div id="progress"><div></div></div>
-
-	<script>
-
-	function onReady () {
-		document.getElementById ('progress').style.display = 'none';
-		obj.dispatchEvent ({ type: 'render' });
-	}
-
-	function assignMaterials (object) {
-		if (object.material) {
-			if (object.name == 'Ring') {
-				object.material = makeMatCapMaterial ('gold.jpg');
-			} else {
-				object.geometry.computeVertexNormals ();
-				object.material = makeDiamondMaterial ();
-				object.material.shading = THREE.FlatShading;
-			}
-			object.material.addEventListener ('ready', onReady);
-		}
-
-		if (object.type == 'PerspectiveCamera') {
-			object.position.z *= -1;
-			object.position.y = object.position.z * 0.6;
-			object.position.x = object.position.z * 0.27;
-			object.lookAt (new THREE.Vector3);
-		}
-	}
-
-	var obj = loadFile ('ring.obj', assignMaterials, document.body);
-
-	obj.addEventListener ('progress', function (event) {
-		document.querySelector ('#progress div').style.width = Math.round (100 * event.loaded / event.total) + '%';
-	});
-
-	obj.addEventListener ('ready', function () {
-
-		var resize = function () {
-			obj.dispatchEvent ({
-				type: 'resize', width: window.innerWidth, height: window.innerHeight
-			});
-		};
-
-		window.addEventListener ('resize', resize);
-		resize ();
-	});
-
-	</script>
+	<script src="bundle.js"></script>
+	<a href="javascript:void(0)" class="gold material" title="gold"></a>
+	<a href="javascript:void(0)" class="grey material" title="grey"></a>
+	<a href="javascript:void(0)" class="pink material" title="pink"></a>
+	<script src="/ga.js"></script>
 </body>
 </html>
