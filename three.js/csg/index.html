@@ -5,7 +5,7 @@
 <style>
 	body { margin: 0; overflow: hidden; }
 	canvas { position: absolute; left: calc(50% - 200px); top: calc(50% - 200px); }
-	.buttons { position: absolute; left: calc(50% - 200px); top: calc(50% + 230px); width: 400px; text-align: center; }
+	.buttons { position: absolute; left: calc(50% - 200px); top: calc(50% + 130px); width: 400px; text-align: center; }
 	.buttons button { cursor: pointer; width: 30px; height: 30px; background-color: transparent; background-image: url(modes.png); background-size: 90px 30px; border: none; margin-left: 40px; }
 	.buttons button.or { margin-left: 0; }
 	.buttons button.not { background-position-x: 60px; }
@@ -170,19 +170,21 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 	scenes['or'].add(new THREE.Mesh(geometryB, materialB));
 
 	scenes['not'] = sub(geometryA, geometryB, materialA, materialB);
-	scenes['not'].add(new THREE.Mesh(geometryA, new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: true })));
+	scenes['not'].add(new THREE.Mesh(geometryA, new THREE.MeshBasicMaterial({ color: 'cyan', wireframe: true })));
 	orderScene(scenes['not']);
 
 	scenes['and'] = and(geometryA, geometryB, materialA, materialB);
+	scenes['and'].add(new THREE.Mesh(geometryA, new THREE.MeshBasicMaterial({ color: 'cyan', wireframe: true })));
 	orderScene(scenes['and']);
 
 
 	var renderer = new THREE.WebGLRenderer( { antialias: true, sortObjects: false } );
-		renderer.setSize( 400, 400 );
+		renderer.setClearColor( 'white' );
+		renderer.setSize( 400, 300 );
 
 	document.body.appendChild( renderer.domElement );
 
-	var camera = new THREE.PerspectiveCamera( 70, 1, 0.01, 10 );
+	var camera = new THREE.PerspectiveCamera( 70, 4 / 3, 0.01, 10 );
 		camera.position.z = 1;
 
 	function animate() {
@@ -204,5 +206,7 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 });
 
 </script>
+
+<script src="/ga.js"></script>
 </body>
 </html>
