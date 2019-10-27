@@ -127,6 +127,14 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 
 	sub(geometryA, geometryB, materialA, materialB);
 
+	// debug
+	scene.add(new THREE.Mesh(geometryA, new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: true })));
+
+
+	for (var i = 0; i < scene.children.length; i++) {
+		scene.children[i].renderOrder = i + 1;
+	}
+
 
 	var renderer = new THREE.WebGLRenderer( { antialias: true, sortObjects: false } );
 		renderer.setSize( 400, 400 );
@@ -136,17 +144,13 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 	var camera = new THREE.PerspectiveCamera( 70, 1, 0.01, 10 );
 		camera.position.z = 1;
 
-	var mount = new THREE.Group();
-		mount.add(camera); scene.add(mount);
-
-
-	for (var i = 0; i < scene.children.length; i++) {
-		scene.children[i].renderOrder = i + 1; // needed ??
-	}
-
 	function animate() {
-		mount.rotation.x += 0.01;
-		mount.rotation.y += 0.02;
+		scene.traverse(function (object) {
+			if(object.geometry) {
+				if(object.geometry === geometryA) { object.rotation.x += 0.01; object.rotation.z += 0.03; object.position.z = 0.15 * Math.sin(object.rotation.x); }
+				if(object.geometry === geometryB) { object.rotation.y += 0.02; }
+			}
+		});
 
 		renderer.render(scene, camera);
 		requestAnimationFrame(animate);
