@@ -188,7 +188,7 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 	function animate() {
 		var scene = scenes[mode];
 
-		scene.traverse(function (object) {
+		for (var name in scenes) scenes[name].traverse(function (object) {
 			if(object.geometry) {
 				if(object.geometry === geometryA) { object.rotation.x += 0.01; object.rotation.z += 0.03; object.position.z = 0.15 * Math.sin(object.rotation.x); }
 				if(object.geometry === geometryB) { object.rotation.y += 0.02; }
