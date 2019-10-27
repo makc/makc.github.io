@@ -5,14 +5,33 @@
 <style>
 	body { margin: 0; overflow: hidden; }
 	canvas { position: absolute; left: calc(50% - 200px); top: calc(50% - 200px); }
+	.buttons { position: absolute; left: calc(50% - 200px); top: calc(50% + 230px); width: 400px; text-align: center; }
+	.buttons button { cursor: pointer; width: 30px; height: 30px; background-color: transparent; background-image: url(modes.png); background-size: 90px 30px; border: none; margin-left: 40px; }
+	.buttons button.or { margin-left: 0; }
+	.buttons button.not { background-position-x: 60px; }
+	.buttons button.and { background-position-x: 30px; }
 </style>
 </head>
 <body>
 
+<div class="buttons" onclick="switchMode(event)">
+	<button class="or" title="union"></button>
+	<button class="not" title="subtract"></button>
+	<button class="and" title="intersect"></button>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/109/three.min.js"></script>
 <script>
 
-var scene = new THREE.Scene();
+var mode = "not";
+var scenes = {};
+
+function switchMode(event) {
+	var name = event.target.className;
+	if (scenes[name]) {
+		mode = name;
+	}
+}
 
 
 function copyMaterialSettings(from, to) {
@@ -32,7 +51,7 @@ function copyMaterialSettings(from, to) {
    inside b's volume. Requirements: GL_CULL_FACE enabled, depth func GL_LESS
    Side effects: depth test, stencil func, stencil op */
 
-function firstInsideSecond(a, b, face, test, material, materialSettings) {
+function firstInsideSecond(a, b, face, test, material, scene, materialSettings) {
 
 	// instead of immediately rendering geometries a and b
 	// as in csg.c, we just add them to the scene in order
@@ -86,7 +105,7 @@ function firstInsideSecond(a, b, face, test, material, materialSettings) {
 	return material;
 }
 
-function fixDepth(a, materialSettings) {
+function fixDepth(a, scene, materialSettings) {
 	var stencilMaterial = new THREE.MeshBasicMaterial();
 	copyMaterialSettings(materialSettings, stencilMaterial);
 	stencilMaterial.colorWrite = false; // glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -103,15 +122,36 @@ function fixDepth(a, materialSettings) {
 	return materialSettings;
 }
 
+/* "and" two objects together */
+function and(a, b, materialA, materialB) {
+	var scene = new THREE.Scene();
+
+	var materialSettings = firstInsideSecond(a, b, THREE.FrontSide, THREE.NotEqualStencilFunc, materialA, scene);
+
+	materialSettings = fixDepth(b, scene, materialSettings);
+
+	firstInsideSecond(b, a, THREE.FrontSide, THREE.NotEqualStencilFunc, materialB, scene, materialSettings);
+
+	return scene;
+}
+
 /* subtract b from a */
 function sub(a, b, materialA, materialB) {
-	var materialSettings = firstInsideSecond(a, b, THREE.BackSide, THREE.NotEqualStencilFunc, materialA);
+	var scene = new THREE.Scene();
 
-	materialSettings = fixDepth(b, materialSettings);
+	var materialSettings = firstInsideSecond(a, b, THREE.BackSide, THREE.NotEqualStencilFunc, materialA, scene);
 
-	firstInsideSecond(b, a, THREE.FrontSide, THREE.EqualStencilFunc, materialB, materialSettings);
+	materialSettings = fixDepth(b, scene, materialSettings);
 
-//  glDisable(GL_STENCIL_TEST);  /* reset things */
+	firstInsideSecond(b, a, THREE.FrontSide, THREE.EqualStencilFunc, materialB, scene, materialSettings);
+
+	return scene;
+}
+
+function orderScene(scene) {
+	for (var i = 0; i < scene.children.length; i++) {
+		scene.children[i].renderOrder = i + 1;
+	}
 }
 
 var loader = new THREE.TextureLoader;
@@ -125,15 +165,16 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 	var geometryA = new THREE.BoxGeometry( 0.5, 0.65, 0.5 );
 	var geometryB = new THREE.SphereGeometry( 0.36, 32, 16 );
 
-	sub(geometryA, geometryB, materialA, materialB);
+	scenes['or'] = new THREE.Scene();
+	scenes['or'].add(new THREE.Mesh(geometryA, materialA));
+	scenes['or'].add(new THREE.Mesh(geometryB, materialB));
 
-	// debug
-	scene.add(new THREE.Mesh(geometryA, new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: true })));
+	scenes['not'] = sub(geometryA, geometryB, materialA, materialB);
+	scenes['not'].add(new THREE.Mesh(geometryA, new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: true })));
+	orderScene(scenes['not']);
 
-
-	for (var i = 0; i < scene.children.length; i++) {
-		scene.children[i].renderOrder = i + 1;
-	}
+	scenes['and'] = and(geometryA, geometryB, materialA, materialB);
+	orderScene(scenes['and']);
 
 
 	var renderer = new THREE.WebGLRenderer( { antialias: true, sortObjects: false } );
@@ -145,6 +186,8 @@ loader.load('https://i.imgur.com/28m2hlS.jpg', function(texture) {
 		camera.position.z = 1;
 
 	function animate() {
+		var scene = scenes[mode];
+
 		scene.traverse(function (object) {
 			if(object.geometry) {
 				if(object.geometry === geometryA) { object.rotation.x += 0.01; object.rotation.z += 0.03; object.position.z = 0.15 * Math.sin(object.rotation.x); }
