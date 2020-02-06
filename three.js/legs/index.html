@@ -1,0 +1,108 @@
+<html>
+<head>
+	<meta charset="utf8" />
+	<title>Legs</title>
+	<style>* { margin: 0; overflow: hidden; background-color: black; }</style>
+</head>
+<body>
+	<script src="https://rawcdn.githack.com/mrdoob/three.js/e0a31ea77c0242ae29ef6e951fa588216e1d247f/build/three.min.js"></script>
+	<script src="https://rawcdn.githack.com/mrdoob/three.js/e0a31ea77c0242ae29ef6e951fa588216e1d247f/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://rawcdn.githack.com/mrdoob/three.js/e0a31ea77c0242ae29ef6e951fa588216e1d247f/examples/js/loaders/OBJLoader.js"></script>
+	<script src="https://rawcdn.githack.com/hofk/THREEi.js/7efc02901ae7aadeaaa8e46301e5719d72527005/THREEi.js"></script>
+	<script>
+
+var camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.01, 10 );
+	camera.position.set( 0, 0.5, 1.1 );
+
+var scene = new THREE.Scene();
+
+var geometry = new THREE.BufferGeometry();
+	// https://discourse.threejs.org/t/triangulation-cylinder-with-holes/9828/4 o_O
+	THREEi.createCylinderWithHoles.call( geometry, {
+		d: 0.03, div4: 5, bottom: -0.32, top: 0.28,
+		holes: [
+			// circular (deformed) hole, 3 elements: [ y, phi, div4Hole ], div4Hole <= div4	
+			[ 0, -2, 4 ], [ 0.2, 0.3, 3 ], [ 0.1, -3, 2 ], [ 0.1, -0.25, 2.5 ], [ -0.2, -1, 3 ], [ -0.1, -3, 3 ], [ -0.25, -3.5, 2 ]
+		]
+	} );
+
+	material = new THREE.MeshBasicMaterial( { color: 0x7f003f, wireframe: true } );
+
+	mesh = new THREE.Mesh( geometry, material );
+	mesh.position.x = 0.19;
+	mesh.position.z = 0.04;
+	mesh.rotation.z = 0.35;
+	mesh.rotation.x = -0.1
+	scene.add( mesh );
+
+
+	renderer = new THREE.WebGLRenderer( { antialias: true } );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	document.body.appendChild( renderer.domElement );
+
+
+	addEventListener( "resize", function() {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+	} );
+
+var controls = new THREE.OrbitControls( camera, renderer.domElement );
+	controls.enableKeys = false;
+	controls.enablePan = false;
+	controls.enableZoom = false;
+	controls.minAzimuthAngle = -1.5;
+	controls.maxAzimuthAngle = +1.5;
+	controls.minPolarAngle = 0.9;
+	controls.maxPolarAngle = 1.6;
+
+var i = 0, from = new THREE.Vector3, to = new THREE.Vector3, raycaster = new THREE.Raycaster;
+
+function animate() {
+
+	if( legs ) {
+		var position = mesh.geometry.getAttribute( "position" );
+		if( position.count > i ) {
+			do {
+				from.set( position.getX( i ), position.getY( i ), position.getZ( i ) );
+				i++;
+			} while( from.lengthSq() === 0 );
+			to.set( 0, from.y, 0 );
+
+			raycaster.ray.origin.copy( from ); mesh.localToWorld( raycaster.ray.origin );
+			mesh.localToWorld( to ); raycaster.ray.direction.copy( to.sub( raycaster.ray.origin ) ).normalize();
+
+			var result = raycaster.intersectObject( legs );
+			if( result && result[0] ) {
+				mesh.worldToLocal( result[0].point );
+				from.multiplyScalar( 0.1 ).addScaledVector( result[0].point, 0.9 );
+				position.setXYZ( i - 1, from.x, from.y, from.z );
+				position.needsUpdate = true;
+			}
+		}
+	}
+
+	renderer.render( scene, camera );
+
+	requestAnimationFrame( animate );
+
+}
+
+
+var objLoader = new THREE.OBJLoader();
+var pngLoader = new THREE.TextureLoader();
+var legs; objLoader.load( "legs.obj", function( result ) {
+	legs = result.getObjectByProperty( "type", "Mesh" );
+	legs.material = new THREE.MeshMatcapMaterial( { matcap: pngLoader.load( "anime.png", function() {
+		scene.add( legs );
+		legs.updateMatrixWorld( true );
+		mesh.updateMatrixWorld( true );
+		animate();
+	} ) } );
+	legs.position.y = 0.23;
+	legs.rotation.y = 3.14;
+} );
+
+	</script>
+</body>
+</html>
