@@ -1,0 +1,448 @@
+<html>
+<head>
+	<meta charset="utf8" />
+	<title>Butterflies</title>
+
+	<style type="text/css">
+		* { margin: 0; }
+		body { background-color: black; overflow: hidden; }
+	</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r75/three.min.js"></script>
+<script src="matcap/OrbitControls.js"></script>
+<script>
+	var renderer = new THREE.WebGLRenderer ();
+	document.body.appendChild (renderer.domElement);
+
+	var	scene = new THREE.Scene ();
+	var camera = new THREE.PerspectiveCamera (50, 1, 1, 2000);
+
+	function resize () {
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+		
+		camera.aspect = width / height;
+		camera.updateProjectionMatrix ();
+		renderer.setSize (width, height);
+	}
+	
+	window.addEventListener ('resize', resize);
+	
+	resize ();
+
+
+	// skybox from http://www.freezurbern.com/files/skyseeker/index.php?skybox=meadow
+	function loadTexture (path) {
+		var texture = new THREE.Texture ();
+		var material = new THREE.MeshBasicMaterial ({ map: texture });
+
+		var image = new Image();
+		image.crossOrigin = 'anonymous';
+		image.onload = function () {
+			texture.needsUpdate = true;
+			material.map.image = this;
+		};
+		image.src = path;
+
+		return material;
+	}
+
+	// add ?projector to url for black background
+	var	meadow; if (location.href.indexOf ('projector') < 0) {
+		meadow = new THREE.Mesh( new THREE.BoxGeometry( 1000, 1000, 1000 ), new THREE.MeshFaceMaterial( [
+			loadTexture( 'https://threejs.org/examples/textures/cube/Park2/posx.jpg' ), // front
+			loadTexture( 'https://threejs.org/examples/textures/cube/Park2/negx.jpg' ), // back
+			loadTexture( 'https://threejs.org/examples/textures/cube/Park2/posy.jpg' ), // top
+			loadTexture( 'https://threejs.org/examples/textures/cube/Park2/negy.jpg' ), // bottom
+			loadTexture( 'https://threejs.org/examples/textures/cube/Park2/posz.jpg' ), // right
+			loadTexture( 'https://threejs.org/examples/textures/cube/Park2/negz.jpg' )  // left
+		] ) );
+		meadow.scale.x = -1;
+	}
+
+
+	var cfg = {
+		logn: 8.52,
+		color: 0xff7f00,
+		range: 0.1 + 0.8 * Math.random ()
+	};
+
+
+	var N = Math.exp (cfg.logn) | 0, A = 4, randoms = [];
+	for (var r = 0; r < N; r++) {
+		randoms [r] = Math.random ();
+	}
+
+	var mouse = { u: 0.5, v: 0.5, effect: 0, raycaster: new THREE.Raycaster () };
+
+	var tmpv = new THREE.Vector3 ();
+
+	var animateButterflies = function (time) {
+		// loaded?
+		if (!butterflies.objects) return;
+
+		var D = Date.now ();
+		var T = (D % 50000) * 2e-5 * 2 * Math.PI;
+
+		// slowly move their goal posts
+		D = (D / 1000) | 0;
+
+		mouse.effect *= 0.5;
+
+		for (var i = 0; i < N; i++) {
+			var butterfly = butterflies.objects [i];
+
+			// high level motion
+			butterfly.velocity.multiplyScalar (10);
+
+			var k;
+
+			while ((k = (i + D) % N) == i) D++;
+			tmpv.copy (butterflies.objects [k].position).sub (butterfly.position).normalize();
+			butterfly.velocity.add (tmpv);
+
+			while ((k = (i + D + 123) % N) == i) D++;
+			tmpv.copy (butterflies.objects [k].position).sub (butterfly.position).normalize();
+			butterfly.velocity.sub (tmpv);
+
+			while ((k = (i + D + 456) % N) == i) D++;
+			tmpv.copy (butterflies.objects [k].position).sub (butterfly.position).normalize();
+			butterfly.velocity.sub (tmpv);
+
+			while ((k = (i + D + 678) % N) == i) D++;
+			tmpv.copy (butterflies.objects [k].position).sub (butterfly.position).normalize();
+			butterfly.velocity.sub (tmpv);
+
+
+			for (var j = 0; j < A; j++) {
+				// simple Lissajous curves
+				var	a = j + 1, b = a + 1, c = b + 1, d = j / A * 2 * Math.PI;
+
+				tmpv.set (
+					Math.sin (a * (T + d)), Math.sin (b * (T + d)), Math.sin (c * (T + d))
+				).multiplyScalar (200).sub (butterfly.position).multiplyScalar (0.01 * randoms [(i + j) % N]);
+				butterfly.velocity.add (tmpv);
+			}
+
+
+			tmpv.copy (butterfly.position); if (Math.abs (tmpv.y) < 1e-3) tmpv.y = 1e-3; tmpv.normalize ();
+			butterfly.velocity.sub (tmpv);
+
+			// handle clicks
+			mouse.raycaster.ray.closestPointToPoint (butterfly.position, tmpv);
+			tmpv.sub (butterfly.position);
+
+			var L = tmpv.length (), M = 42;
+			if (isFinite (1 / L)) tmpv.normalize (); else tmpv.y = 1;
+
+			// is L, want M => move by M - L
+			butterfly.position.sub (tmpv.multiplyScalar (Math.max (0, M - L) * mouse.effect));
+
+			butterfly.position.add (butterfly.velocity.normalize ());
+
+			tmpv.copy (butterfly.position).add (butterfly.velocity);
+			butterfly.lookAt (tmpv);
+
+			butterfly.updateMatrix ();
+
+
+			// animate butterflies
+			var t = (time + randoms[i]) % 1;
+
+			// non-linear time
+			t = 2 * t - 1;
+			t = 0.5 + 0.75 * t / (Math.abs(t) + 0.5);
+
+			var sin1 = Math.sin (t * Math.PI * 2);
+			var sin2 = Math.sin (t * Math.PI * 2 - 1.5);
+
+			var up = Math.sqrt(1 - sin2) - 0.5;
+
+
+			for (var j = 0, m = butterflyParts.length; j < m; j++) {
+
+				var uniforms = butterflies.children [j].material.uniforms;
+				if (uniforms.t) uniforms.t.value = t;
+
+
+				// animate parts
+				var part = butterflyParts [j];
+				part.position.y = 0;
+
+				if (j == 1) {
+					// tail
+					part.rotation.x = - 0.55 * Math.PI - 0.3 * up;
+					part.position.y = 0.1 * up;
+				} else if (j > 1) {
+					// wings
+					var type = ((j - 2) / 2) | 0;
+					var w = (j - 2) % 2;
+					part.rotation.y = (w * 2 - 1) * ((sin1 * 0.5 - 0.6) * 2.6 + 0.5 * Math.PI - 0.2 * type);
+				}
+
+				part.position.y += 1.2 * up;
+
+
+				part.updateMatrix ();
+				part.matrix.multiplyMatrices (butterfly.matrix, part.matrix);
+
+
+				var geometry = butterflies.children [j].geometry;
+
+				var mcol0 = geometry.attributes.mcol0;
+				var mcol1 = geometry.attributes.mcol1;
+				var mcol2 = geometry.attributes.mcol2;
+				var mcol3 = geometry.attributes.mcol3;
+
+				var me = part.matrix.elements;
+				mcol0.setXYZ( i, me[ 0 ], me[ 1 ], me[ 2 ] ).needsUpdate = true;
+				mcol1.setXYZ( i, me[ 4 ], me[ 5 ], me[ 6 ] ).needsUpdate = true;
+				mcol2.setXYZ( i, me[ 8 ], me[ 9 ], me[ 10 ] ).needsUpdate = true;
+				mcol3.setXYZ( i, me[ 12 ], me[ 13 ], me[ 14 ] ).needsUpdate = true;
+
+			}
+
+		}
+
+	};
+
+
+	var manager = new THREE.LoadingManager (function () {
+		scene.add (butterflies);
+
+		if (meadow) scene.add (meadow);
+
+		camera.position.x = 150;
+		camera.position.y = -10;
+		camera.position.z = 15;
+		camera.lookAt (butterflies.position);
+	});
+
+
+	var butterflyParts, butterflies = new THREE.Object3D ();
+
+	var butterflyLoader = new THREE.ObjectLoader (manager);
+
+	var butterflyTexture = (new THREE.TextureLoader (manager)).load ('butterfly/butterfly.png');
+
+	butterflyLoader.load ('butterfly/butterfly.json', function (object) {
+
+		var bodyMaterial = new THREE.RawShaderMaterial ({
+			vertexShader : '\n\
+				precision highp float;\n\
+				uniform mat4 modelViewMatrix;\n\
+				uniform mat4 projectionMatrix;\n\
+				\n\
+				attribute vec3 position;\n\
+				attribute vec2 uv;\n\
+				attribute vec3 mcol0;\n\
+				attribute vec3 mcol1;\n\
+				attribute vec3 mcol2;\n\
+				attribute vec3 mcol3;\n\
+				\n\
+				varying vec2 vUv;\n\
+				void main () {\n\
+					vUv = uv;\n\
+					\n\
+					mat4 matrix = mat4(\n\
+						vec4( mcol0, 0 ),\n\
+						vec4( mcol1, 0 ),\n\
+						vec4( mcol2, 0 ),\n\
+						vec4( mcol3, 1 )\n\
+					);\n\
+					\n\
+					gl_Position = projectionMatrix * (modelViewMatrix * matrix * vec4 (position, 1.0));\n\
+				}',
+			fragmentShader : '\n\
+				precision highp float;\n\
+				uniform sampler2D map;\n\
+				varying vec2 vUv;\n\
+				void main () {\n\
+					gl_FragColor = texture2D (map, vUv);\n\
+				}',
+			uniforms : {
+				map : { type : 't', value : butterflyTexture }
+			}
+		});
+
+		var wingsMaterial = new THREE.RawShaderMaterial ({
+			vertexShader : '#define PI2 ' + (Math.PI * 2) + '\n\
+				precision highp float;\n\
+				uniform float t;\n\
+				\n\
+				uniform mat4 modelViewMatrix;\n\
+				uniform mat4 projectionMatrix;\n\
+				\n\
+				attribute vec3 position;\n\
+				attribute vec2 uv;\n\
+				attribute vec3 color;\n\
+				attribute vec3 mcol0;\n\
+				attribute vec3 mcol1;\n\
+				attribute vec3 mcol2;\n\
+				attribute vec3 mcol3;\n\
+				\n\
+				varying vec3 vColor;\n\
+				varying vec2 vUv;\n\
+				void main () {\n\
+					vColor = color;\n\
+					vUv = uv;\n\
+					\n\
+					mat4 matrix = mat4(\n\
+						vec4( mcol0, 0 ),\n\
+						vec4( mcol1, 0 ),\n\
+						vec4( mcol2, 0 ),\n\
+						vec4( mcol3, 1 )\n\
+					);\n\
+					\n\
+					// bend the wings\n\
+					vec4 vertex = vec4 (position, 1.0);\n\
+					vertex.z = 0.3 * abs(vertex.x) * cos ((t - vertex.y * 0.1) * PI2);\n\
+					\n\
+					gl_Position = projectionMatrix * (modelViewMatrix * matrix * vertex);\n\
+				}',
+			fragmentShader : '\n\
+				precision highp float;\n\
+				uniform sampler2D map;\n\
+				varying vec3 vColor;\n\
+				varying vec2 vUv;\n\
+				void main () {\n\
+					vec4 pixel = texture2D (map, vUv);\n\
+					if (pixel.a < 0.7) discard;\n\
+					float len = length (pixel.rgb);\n\
+					float red = pixel.r / len;\n\
+					gl_FragColor = vec4(vColor * pixel.r * red + pixel.rgb * (1.0 - red), 1.0);\n\
+				}',
+			uniforms : {
+				t : { type : 'f', value : 0 },
+				map : { type : 't', value : butterflyTexture }
+			}
+		});
+
+		butterflyParts = [
+			object.getObjectByName ('body'),
+			object.getObjectByName ('tail'),
+			object.getObjectByName ('left-1'),
+			object.getObjectByName ('right-1'),
+			object.getObjectByName ('left-2'),
+			object.getObjectByName ('right-2')
+		];
+
+		// create instanced geometries as per
+		// http://threejs.org/examples/webgl_interactive_instances_gpu.html
+		function createInstancedGeometryFrom (geometry, instanceCount) {
+			var bgeo = new THREE.BufferGeometry ().fromGeometry (geometry);
+			var igeo = new THREE.InstancedBufferGeometry ();
+
+			var vertices = bgeo.attributes.position.clone();
+			igeo.addAttribute( 'position', vertices );
+
+			var uvs = bgeo.attributes.uv.clone();
+			igeo.addAttribute( 'uv', uvs );
+
+			var mcol0 = new THREE.InstancedBufferAttribute(
+				new Float32Array( instanceCount * 3 ), 3, 1
+			);
+			var mcol1 = new THREE.InstancedBufferAttribute(
+				new Float32Array( instanceCount * 3 ), 3, 1
+			);
+			var mcol2 = new THREE.InstancedBufferAttribute(
+				new Float32Array( instanceCount * 3 ), 3, 1
+			);
+			var mcol3 = new THREE.InstancedBufferAttribute(
+				new Float32Array( instanceCount * 3 ), 3, 1
+			);
+
+			igeo.addAttribute( 'mcol0', mcol0 );
+			igeo.addAttribute( 'mcol1', mcol1 );
+			igeo.addAttribute( 'mcol2', mcol2 );
+			igeo.addAttribute( 'mcol3', mcol3 );
+
+			var color = new THREE.InstancedBufferAttribute(
+				new Float32Array( instanceCount * 3 ), 3, 1
+			);
+
+			igeo.addAttribute( 'color', color );
+			var colorObject = new THREE.Color ();
+			var hue = colorObject.set (cfg.color).getHSL ().h;
+			for (var i = 0; i < instanceCount; i++) {
+				var ih = hue + cfg.range * i / instanceCount - cfg.range * 0.5;
+				if (ih < 0) ih += 1;
+				if (ih > 1) ih -= 1;
+				colorObject.setHSL (ih, 1, 0.5);
+				color.setXYZ( i, colorObject.r, colorObject.g, colorObject.b );
+			}
+
+			return igeo;
+		}
+
+		for (var j = 0; j < butterflyParts.length; j++) {
+			butterflyParts [j].updateMatrix ();
+
+			butterflies.add (new THREE.Mesh (
+				createInstancedGeometryFrom (butterflyParts [j].geometry, N),
+				(j < 2) ? bodyMaterial : wingsMaterial
+			));
+		}
+
+		butterflies.objects = [];
+		for (var i = 0; i < N; i++) {
+			butterflies.objects [i] = new THREE.Object3D ();
+			butterflies.objects [i].position.set (
+				150 * (Math.random () - Math.random ()),
+				150 * (Math.random () - Math.random ()),
+				150 * (Math.random () - Math.random ())
+			);
+			butterflies.objects [i].velocity = new THREE.Vector3 (
+				0, 0, 1
+			);
+		}
+	});
+
+
+	var discardClick = false;
+
+	var controls = new THREE.OrbitControls (camera, renderer.domElement);
+	controls.enableKeys = false;
+
+	controls.minDistance =  50;
+	controls.maxDistance = 250;
+	controls.zoomSpeed   = 0.3;
+
+	controls.addEventListener ('start', function () {
+		discardClick = false;
+	});
+	controls.addEventListener ('change', function () {
+		discardClick = true;
+	});
+
+	function click (event) {
+		if (discardClick) return;
+		// event.clientX, event.clientY
+
+		mouse.u = event.clientX / window.innerWidth;
+		mouse.v = 1 - event.clientY / window.innerHeight;
+		mouse.effect = 1;
+
+		mouse.raycaster.setFromCamera ({
+			x: mouse.u * 2 - 1, y: mouse.v * 2 - 1
+		}, camera);
+	}
+
+	renderer.domElement.addEventListener ('click', click);
+
+
+	function animate () {
+		var T = 0.3;
+		animateButterflies ((Date.now () % (T * 1000)) * (0.001 / T));
+
+		renderer.render (scene, camera);
+		requestAnimationFrame (animate);
+	}
+
+	animate ();
+
+</script>
+<script src="/ga.js"></script>
+</body>
+</html>
