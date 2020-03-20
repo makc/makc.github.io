@@ -26,8 +26,8 @@ var Pathfinder = function( geometry ) {
 		wp.x = positions[ i ];
 		wp.y = positions[ i + 1 ];
 		wp.z = positions[ i + 2 ];
-		wp.node = graph.createNode (wp); graph.addNode (wp.node);
-		nodes[j] = wp;
+		wp.node = graph.createNode( wp ); graph.addNode( wp.node );
+		nodes[ j ] = wp;
 	}
 
 	var edges = {};
@@ -98,24 +98,25 @@ loader.load( "terrain.obj", function( text ) {
 	var renderer = new THREE.WebGLRenderer( { antialias: true } );
 	document.body.appendChild( renderer.domElement );
 
-	var resize = function() {
-		var w = innerWidth, h = innerHeight;
-		camera.aspect = w / h; camera.updateProjectionMatrix();
-		renderer.setSize( w, h );
-	};
-	addEventListener( "resize", resize );
-	resize();
-
 	var render = function() {
 		renderer.render( scene, camera );
 	};
 
-	var controls = new THREE.OrbitControls( camera, renderer.domElement );
-	controls.enableZoom = false;
-	controls.addEventListener( "change", render );
+	var resize = function() {
+		var w = innerWidth, h = innerHeight;
+		camera.aspect = w / h; camera.updateProjectionMatrix();
+		renderer.setSize( w, h );
+		render();
+	};
+	addEventListener( "resize", resize );
 
 	scene.add( new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0x333333, wireframe: true } ) ) );
-	render();
+	resize();
+
+	var controls = new THREE.OrbitControls( camera, renderer.domElement );
+	controls.minDistance =  50;
+	controls.maxDistance = 150;
+	controls.addEventListener( "change", render );
 
 	// demo
 
@@ -142,7 +143,7 @@ loader.load( "terrain.obj", function( text ) {
 			requestAnimationFrame( render );
 		}
 
-	}, 123 );
+	}, 1234 );
 });
 
 </script>
