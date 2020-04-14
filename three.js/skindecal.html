@@ -1,0 +1,156 @@
+<html>
+<head>
+<meta charset="utf-8" />
+<title>SkinnedMesh decal</title>
+<style>
+body {
+  margin: 0; position: relative; overflow: hidden; height: 100%;
+}
+canvas {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+}
+</style>
+</head>
+<body>
+<script src="https://unpkg.com/three@0.115.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.115.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+var camera, scene, renderer, model, mixer, walkAction, raycaster, W = 600, H = 400;
+
+var loader = new THREE.GLTFLoader();
+loader.load( 'https://threejs.org/examples/models/gltf/Soldier.glb', function ( gltf ) {
+
+    camera = new THREE.PerspectiveCamera( 45, W / H, 1, 1000 );
+    camera.position.set( 0.5, 1, -1.5 );
+    camera.lookAt( 0, 1, 0 );
+
+    scene = new THREE.Scene();
+    var hemiLight = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+        hemiLight.position.set( 0, 20, 0 );
+        scene.add( hemiLight );
+    var dirLight = new THREE.DirectionalLight( 0xffffff );
+        scene.add( dirLight );
+
+    model = gltf.scene;
+    scene.add( model );
+
+    mixer = new THREE.AnimationMixer( model );
+    walkAction = mixer.clipAction( gltf.animations[ 3 ] );
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize( W, H );
+    document.body.appendChild( renderer.domElement );
+    
+    raycaster = new THREE.Raycaster();
+
+    animate();
+    
+    window.addEventListener("mouseup", placeDecal);
+    
+    alert("click something");
+});
+
+function animate() {
+
+    requestAnimationFrame( animate );
+
+    mixer.update( 0.005 );
+
+    renderer.render( scene, camera );
+
+}
+
+function placeDecal(event) {
+  var mouse = new THREE.Vector2(
+    ( event.layerX / W ) * 2 - 1,
+    ( event.layerY / H ) * -2 + 1
+  );
+  var intersects = [];
+  raycaster.setFromCamera( mouse, camera );
+  raycaster.intersectObject( scene, true, intersects );
+  if (intersects.length) {
+
+    var textureLoader = new THREE.TextureLoader();
+    textureLoader.crossOrigin = "anonymous";
+    var decalDiffuse =
+    textureLoader.load( "https://threejs.org/examples/textures/decal/decal-diffuse.png" );
+    var decalNormal =
+    textureLoader.load( "https://threejs.org/examples/textures/decal/decal-normal.jpg" );
+    var decalMaterial = new THREE.MeshPhongMaterial( {
+      color: "lime",
+      specular: 0x444444,
+      map: decalDiffuse,
+      normalMap: decalNormal,
+      normalScale: new THREE.Vector2( 1, 1 ),
+      shininess: 30,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: - 4,
+      wireframe: false,
+      // the last but not the least
+      skinning: true
+    } );
+
+    var radius = 6, diameter = radius * 2;
+
+    // now, to the point
+    var point = intersects[0].object.worldToLocal( intersects[0].point );
+    var normal = intersects[0].face.normal;
+    
+    // some random tangent frame, Idk..
+    var p = normal.clone().cross(intersects[0].object.up).normalize();
+    var q = normal.clone().cross(p).normalize();
+
+    var src = intersects[0].object.geometry;
+    var uvs = new Float32Array (src.attributes.uv.count * 2);
+
+    // this model has indices, but we could assume implicit indices had it not..
+    var i, indices = [], v = new THREE.Vector3(),
+        pos = src.attributes.position, ndx = src.index;
+    for(i = 0; i < ndx.count; i++) {
+        var a = ndx.array[3 * i], b = ndx.array[3 * i + 1], c = ndx.array[3 * i + 2];
+        var useFace = false;
+        v.set( pos.getX( a ), pos.getY( a ), pos.getZ( a ) );
+        if(v.distanceTo( point ) < radius) useFace = true; else {
+          v.set( pos.getX( b ), pos.getY( b ), pos.getZ( b ) );
+          if(v.distanceTo( point ) < radius) useFace = true; else {
+            v.set( pos.getX( c ), pos.getY( c ), pos.getZ( c ) );
+            if(v.distanceTo( point ) < radius) useFace = true;
+          }
+        }
+        if( useFace ) {
+          indices.push( a, b, c );
+          // project every vertex onto p0q plane to get some uvs
+          v.set( pos.getX( a ), pos.getY( a ), pos.getZ( a ) ).sub(point);
+          uvs[2 * a] = 0.5 + v.dot(p) / diameter;
+          uvs[2 * a + 1] = 0.5 + v.dot(q) / diameter;
+          v.set( pos.getX( b ), pos.getY( b ), pos.getZ( b ) ).sub(point);
+          uvs[2 * b] = 0.5 + v.dot(p) / diameter;
+          uvs[2 * b + 1] = 0.5 + v.dot(q) / diameter;
+          v.set( pos.getX( c ), pos.getY( c ), pos.getZ( c ) ).sub(point);
+          uvs[2 * c] = 0.5 + v.dot(p) / diameter;
+          uvs[2 * c + 1] = 0.5 + v.dot(q) / diameter;
+        }
+    }
+    
+    var dst = new THREE.BufferGeometry();
+    dst.setIndex (new THREE.Uint16BufferAttribute(indices, 1));
+    dst.setAttribute ("position", pos);
+    dst.setAttribute ("uv", new THREE.BufferAttribute(uvs, 2));
+    dst.setAttribute ("normal", src.attributes.normal);
+    dst.setAttribute ("skinIndex", src.attributes.skinIndex);
+    dst.setAttribute ("skinWeight", src.attributes.skinWeight);
+    
+    var decal = new THREE.SkinnedMesh (dst, decalMaterial);
+    decal.bind (intersects[0].object.skeleton, intersects[0].object.bindMatrix);
+    intersects[0].object.parent.add(decal);
+    
+    window.removeEventListener("mouseup", placeDecal);
+    walkAction.play();
+  }
+}
+</script>
+</body>
+</html>
