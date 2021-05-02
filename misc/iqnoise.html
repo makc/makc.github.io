@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>iq noise</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, shrink-to-fit=no" />
+	<style>
+	img { display: none; }
+	canvas { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); }
+	</style>
+</head>
+<body>
+	<canvas width="600" height="600"></canvas>
+	<img src="iqnoise/iChannel0.png" onload="init(this)" />
+	<script>
+	// credits:
+	// texture-based 3D noise demo from https://www.shadertoy.com/view/4sfGzS
+	// "shadertoy" boilerplate from https://twitter.com/MaximeEuziere/status/1196337120807403526
+	function init(img) {
+		var gl = document.querySelector("canvas").getContext("webgl");
+		var tex = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, tex);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // important
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // must be false (default)
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+
+		var vs = gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vs,
+			`void main(){
+				gl_Position=vec4(0,0,0,1);gl_PointSize=600.0;
+			}`);
+		gl.compileShader(vs);
+
+		var fs = gl.createShader(gl.FRAGMENT_SHADER);
+		gl.shaderSource(fs,
+			`precision highp float;
+
+			uniform sampler2D iChannel0;
+			uniform float iTime;
+
+			// Inigo Quilez noise
+			float noise(vec3 x){
+				vec3 i = floor(x);
+				vec3 f = fract(x);
+				f = f*f*(3.0-2.0*f);
+				vec2 uv = (i.xy+vec2(37.0,17.0)*i.z) + f.xy;
+				vec2 rg = texture2D( iChannel0, (uv+0.5)/256.0, 0.0).yx;
+				return mix( rg.x, rg.y, f.z );
+			}
+
+			const mat3 m = mat3( 0.00,  0.80,  0.60,
+			                    -0.80,  0.36, -0.48,
+			                    -0.60, -0.48,  0.64 );
+			void main(){
+				vec4 p=vec4(gl_FragCoord.xy/300.-1.,0.,1);
+
+				// camera movement	
+				float an = 0.5 * iTime;
+				vec3 ro = vec3(2.5 * cos(an), 1.0, 2.5 * sin(an));
+				vec3 ta = vec3(0.0, 1.0, 0.0);
+				// camera matrix
+				vec3 ww = normalize(ta - ro);
+				vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+				vec3 vv = normalize(cross(uu, ww));
+				// create view ray
+				vec3 rd = normalize(p.x * uu + p.y * vv + 1.5 * ww);
+
+				// sphere center	
+				vec3 sc = vec3(0.0, 1.0, 0.0);
+
+				// raytrace
+				float tmin = 10000.0;
+				vec3 nor = vec3(0.0);
+				float occ = 1.0;
+				vec3 pos = vec3(0.0);
+
+				// raytrace-plane
+				float h = (0.0 - ro.y) / rd.y;
+				if(h > 0.0) {
+					tmin = h;
+					nor = vec3(0.0, 1.0, 0.0);
+					pos = ro + h * rd;
+					vec3 di = sc - pos;
+					float l = length(di);
+					occ = 1.0 - dot(nor, di / l) * 1.0 * 1.0 / (l * l);
+				}
+
+				// raytrace-sphere
+				vec3 ce = ro - sc;
+				float b = dot(rd, ce);
+				float c = dot(ce, ce) - 1.0;
+				h = b * b - c;
+				if(h > 0.0) {
+					h = -b - sqrt(h);
+					if(h < tmin) {
+						tmin = h;
+						nor = normalize(ro + h * rd - sc);
+						occ = 0.5 + 0.5 * nor.y;
+					}
+				}
+
+				// shading/lighting	
+				vec3 col = vec3(0.9);
+				if(tmin < 100.0) {
+					pos = ro + tmin * rd;
+					float f = 0.0;
+
+					if(p.x < 0.0) {
+						f = noise(16.0 * pos);
+					} else {
+						vec3 q = 8.0 * pos;
+						f = 0.5000 * noise(q);
+						q = m * q * 2.01;
+						f += 0.2500 * noise(q);
+						q = m * q * 2.02;
+						f += 0.1250 * noise(q);
+						q = m * q * 2.03;
+						f += 0.0625 * noise(q);
+						q = m * q * 2.01;
+					}
+
+					f *= occ;
+					col = vec3(f * 1.2);
+					col = mix(col, vec3(0.9), 1.0 - exp(-0.003 * tmin * tmin));
+				}
+
+				col = sqrt(col);
+
+				col *= smoothstep(0.006, 0.008, abs(p.x));
+
+				gl_FragColor = vec4(col, 1.0);
+			}`);
+		gl.compileShader(fs);
+
+		var program = gl.createProgram();
+		gl.attachShader(program, vs);
+		gl.attachShader(program, fs);
+		gl.linkProgram(program);
+		gl.useProgram(program);
+
+		gl.uniform1i(gl.getUniformLocation(program, "iChannel0"), 0);
+		gl.activeTexture(gl.TEXTURE0);
+
+		var frame = 0;
+		setInterval(() => {
+			gl.uniform1f(gl.getUniformLocation(program, "iTime"), frame += 0.016);
+			gl.drawArrays(gl.POINTS,0,1);
+		},16);
+	}
+	</script>
+</body>
+</html>
