@@ -15,6 +15,7 @@
 	<script>
 	// credits:
 	// texture-based 3D noise demo from https://www.shadertoy.com/view/4sfGzS
+	// modified 3D noise function from https://www.shadertoy.com/view/4dsGRl
 	// "shadertoy" boilerplate from https://twitter.com/MaximeEuziere/status/1196337120807403526
 	function init(img) {
 		var gl = document.querySelector("canvas").getContext("webgl");
@@ -39,13 +40,25 @@
 			uniform float iTime;
 
 			// Inigo Quilez noise
-			float noise(vec3 x){
+			float noise0(vec3 x){
 				vec3 i = floor(x);
 				vec3 f = fract(x);
 				f = f*f*(3.0-2.0*f);
 				vec2 uv = (i.xy+vec2(37.0,17.0)*i.z) + f.xy;
 				vec2 rg = texture2D( iChannel0, (uv+0.5)/256.0, 0.0).yx;
 				return mix( rg.x, rg.y, f.z );
+			}
+
+			// Hazel Quantock modification (re-aligns cracks vertically)
+			float noise(vec3 x){
+				vec3 i = floor(x.xzy);
+				vec3 f = fract(x.xzy);
+				vec3 f2 = f*f; f = f*f2*(10.0-15.0*f+6.0*f2);
+				// there's an artefact because the y channel almost, but not exactly, matches the r channel shifted (37,17)
+				// this artefact doesn't seem to show up in chrome, so I suspect firefox uses different texture compression.
+				vec2 uv = (i.xy+vec2(37.0,17.0)*i.z) + f.xy;
+				vec2 rg = texture2D( iChannel0, (uv+0.5)/256.0, 0.0).ba;
+				return mix( rg.y, rg.x, f.z );
 			}
 
 			const mat3 m = mat3( 0.00,  0.80,  0.60,
