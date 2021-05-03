@@ -16,6 +16,7 @@
 	// credits:
 	// texture-based 3D noise demo from https://www.shadertoy.com/view/4sfGzS
 	// modified 3D noise function from https://www.shadertoy.com/view/4dsGRl
+	// procedural 3D noise function from https://www.shadertoy.com/view/4dS3Wd
 	// "shadertoy" boilerplate from https://twitter.com/MaximeEuziere/status/1196337120807403526
 	function init(img) {
 		var gl = document.querySelector("canvas").getContext("webgl");
@@ -51,7 +52,7 @@
 			}
 
 			// Hazel Quantock modification (re-aligns cracks vertically)
-			float noise(vec3 x){
+			float noise1(vec3 x){
 				vec3 i = floor(x.xzy);
 				vec3 f = fract(x.xzy);
 				vec3 f2 = f*f; f = f*f2*(10.0-15.0*f+6.0*f2);
@@ -60,6 +61,25 @@
 				vec2 uv = (i.xy+vec2(37.0,17.0)*i.z) + f.xy;
 				vec2 rg = texture2D( iChannel0, (uv+0.5)/256.0, 0.0).ba;
 				return mix( rg.y, rg.x, f.z );
+			}
+
+			// Morgan McGuire noise
+			float hash(float p) { p = fract(p * 0.011); p *= p + 7.5; p *= p + p; return fract(p); }
+			float noise(vec3 x) {
+				const vec3 step = vec3(110, 241, 171);
+
+				vec3 i = floor(x);
+				vec3 f = fract(x);
+			 
+				// For performance, compute the base input to a 1D hash from the integer part of the argument and the 
+				// incremental change to the 1D based on the 3D -> 1D wrapping
+				float n = dot(i, step);
+
+				vec3 u = f * f * (3.0 - 2.0 * f);
+				return mix(mix(mix( hash(n + dot(step, vec3(0, 0, 0))), hash(n + dot(step, vec3(1, 0, 0))), u.x),
+				               mix( hash(n + dot(step, vec3(0, 1, 0))), hash(n + dot(step, vec3(1, 1, 0))), u.x), u.y),
+				           mix(mix( hash(n + dot(step, vec3(0, 0, 1))), hash(n + dot(step, vec3(1, 0, 1))), u.x),
+				               mix( hash(n + dot(step, vec3(0, 1, 1))), hash(n + dot(step, vec3(1, 1, 1))), u.x), u.y), u.z);
 			}
 
 			const mat3 m = mat3( 0.00,  0.80,  0.60,
