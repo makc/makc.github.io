@@ -50,9 +50,9 @@ var Pathfinder = function( geometry ) {
 	edges = undefined;
 
 	this.findPath = function( a, b ) {
-		var path = new de.polygonal.ds.DA();
+		var path = [];
 		if( astar.find( graph, nodes[ a ], nodes[ b ], path ) ) {
-			return path._a;
+			return path;
 		}
 	};
 };
