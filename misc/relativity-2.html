@@ -1,0 +1,114 @@
+<html>
+<head>
+    <title>Space traveller calculator</title>
+    <style>
+        body { background-color: black; color: white; font: 20px sans-serif; padding: 20px; text-align: center; }
+        select { padding: 5px; }
+        #speed { font-size: 40px; font-weight: bold; margin: 40px 0; }
+    </style>
+</head>
+<body>
+    <!-- https://makc.github.io/wonderfl/#dfqa -->
+    To reach the
+    <select id="what"></select>
+    in
+    <select id="when"></select>
+    you need to go at
+    <div id="speed"></div>
+    (our current record of 0.000234 c is held by <a href="https://en.wikipedia.org/wiki/Helios_(spacecraft)">Helios 2 probe</a>)
+
+<script>
+    // meter definition, SI 2.1.1.1
+    const c = 299792458;
+    // astonomical unit, IAU 2012 resolution B2
+    const au = 149597870700;
+    // light year
+    const ly = c * 24 * 60 * 60 * 365.25;
+
+    const distances = [
+        {
+            label: "Sun",
+            value: au
+        },{
+            label: "Jupiter",
+            value: (5.204267 - 1) * au
+        },{
+            label: "Pluto",
+            value: (39.264 - 1) * au
+        },{
+            label: "Proxima Centauri",
+            value: 4.24 * ly
+        },{
+            label: "Sirius",
+            value: 8.6 * ly
+        },{
+            label: "Galactic Center",
+            value: 27000 * ly
+        },{
+            label: "nearest galaxy",
+            value: 180000 * ly // actually Magellanic Clouds periapsis
+        }
+    ]
+
+    const times = [
+        {
+            label: "ten years",
+            value: 10 * 365.25 * 24 * 60 * 60
+        },{
+            label: "a year",
+            value: 365.25 * 24 * 60 * 60 // julian year
+        },{
+            label: "three months",
+            value: 0.25 * 365.25 * 24 * 60 * 60
+        },{
+            label: "two weeks",
+            value: 14 * 24 * 60 * 60
+        }
+    ]
+
+    const what = document.getElementById('what')
+    const when = document.getElementById('when')
+
+    let html = ''
+    for (let d of distances) {
+        html += '<option value="' + d.value + '">' + d.label + '</option>'
+    }
+    what.innerHTML = html
+
+    html = ''
+    for (let t of times) {
+        html += '<option value="' + t.value + '">' + t.label + '</option>'
+    }
+    when.innerHTML = html
+
+    const speed = document.getElementById('speed')
+
+    function update () {
+        let f = calculateFraction (
+            Number(when.value),
+            Number(what.value)
+        ).toString ();
+         
+        let i = 3, c = f.charAt (2);
+        while ((i < f.length) && (f.charAt (i) == c)) i++;
+         
+        f = f.substr (0, i + 2);
+        while (f.charAt (f.length - 1) == "0") f = f.substr (0, f.length - 1);
+         
+        speed.textContent = f + " c";
+    }
+      
+    function calculateFraction (seconds, meters) {
+        // seconds (here) = meters (here) / (c * fraction), but
+        // seconds (on board) = meters (here) * sqrt (1 - fraction ^ 2) / (c * fraction)
+        var fu = c * seconds / meters;
+        return Math.sqrt (1 / (1 + fu * fu));
+    }
+
+    update()
+    what.onchange = update
+    when.onchange = update
+
+</script>
+</body>
+</html>

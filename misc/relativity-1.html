@@ -4,18 +4,31 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	<title>Very fast rocket</title>
 	<style>
-		body { margin: 0px; background-color: black; color: white; }
+		body { margin: 0px; background-color: black; color: white; overflow-x: hidden; }
 		input { cursor: pointer; }
+		#intro { font: 20px sans-serif; padding: 20px; }
 		#scale { position: absolute; left: 40px; bottom: 20px; width: 140px; }
 		#stripes { position: absolute; left: 200px; bottom: 20px; }
 		#tilted { position: absolute; left: 235px; bottom: 20px; }
+		#ui { position: relative; }
 		#velocity { position: absolute; right: 40px; bottom: 20px; width: 300px; background: transparent; }
 		#velocity::-moz-range-track { border: 1px solid #777; }
 		#velocityValue { position: absolute; right: 50px; bottom: 40px; font: 40px Arial; font-style: italic; }
 	</style>
 </head>
 <body>
+	<div id="intro">What would it look like to travel in a very fast rocket?
+	<br /><br />
+	For one thing, due to <a href="https://en.wikipedia.org/wiki/Relativistic_aberration">relativistic aberration</a>, the perceived direction of light would
+	cause objects to appear bent. For another, due to <a href="https://en.wikipedia.org/wiki/Length_contraction">Lorentz contraction</a> of space in front of
+	the rocket, <a href="relativity-2.html">you would cover distances faster than expected</a>.
+	<br /><br />
+	This simulation allows you to control the rocket speed as a fraction of <a href="https://en.wikipedia.org/wiki/Speed_of_light">the speed of light</a>
+	while flying through a cubic grid of a selected size. Drag around to look from a different angle.
+	</div>
+	<canvas></canvas>
 
+	<div id="ui">
 	<select id="scale" title="Grid scale" autocomplete="off">
 		<option value="1">One light second</option>
 		<option value="10" selected>Ten light seconds</option>
@@ -26,7 +39,8 @@
 
 	<input id="tilted" type="checkbox" title="Tilted"></input>
 
-	<input id="velocity" type="range" min="0" value="0" max="1" step="0.001" title="Velocity" autocomplete="off"></input><i id="velocityValue">0</i>
+	<input id="velocity" type="range" min="0" value="0.4" max="1" step="0.001" title="Rocket speed" autocomplete="off"></input><i id="velocityValue">0.4c</i>
+	</div>
 
 	<script id="latticeShader" type="x/glsl">
 
@@ -196,16 +210,14 @@
 			camera.position.y = 2;
 			scene.add (camera);
 
-			renderer = new THREE.WebGLRenderer({ antialias: true });
-			document.body.insertBefore(renderer.domElement, document.body.childNodes[0]);
-
+			renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.querySelector('canvas') });
 
 			var uniforms = {
-				angle:      { type:  'f', value: [0] },
+				angle:      { type:  'f', value: [0.4] },
 				resolution: { type: '2f', value: [0, 0] },
 				scale:      { type:  'f', value: [10] },
 				time:       { type:  'f', value: [0] },
-				velocity:   { type:  'f', value: [0] }
+				velocity:   { type:  'f', value: [0.4] }
 			};
 
 
