@@ -8,9 +8,56 @@
 		left: 50%; top: 50%;
 	}
 	</style>
+	<link rel="stylesheet" href="i/toilet.css">
 </head>
 <body>
 	<img src="i/b.jpg" />
+	<div id="button" class="initial">
+		<div id="toilet"></div>
+		<div id="skibidi"></div>
+		<div id="bubble">
+			<div id="loader">
+				<div class="ball"></div>
+				<div class="ball"></div>
+				<div class="ball"></div>
+			</div>
+			<div id="text"></div>
+		</div>
+	</div>
+<script>
+    async function fetchJSON() {
+        while (true) {
+            const res = await fetch("https://oracle-m8u2.onrender.com/");
+
+            if (res.status !== 503)
+            return res.json();
+
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    const button = document.getElementById("button");
+    button.onclick = async function() {
+        const opened = button.classList.contains("animate");
+        const loader = button.querySelector("#loader")
+        if (opened && !loader.style.display) return;
+
+        button.classList.remove("initial");
+        button.classList.toggle("animate");
+
+        if (!opened) {
+            const text = button.querySelector("#text")
+            loader.style.display = ""
+            text.style.display = "none"
+
+            const data = await fetchJSON();
+
+            loader.style.display = "none"
+            text.style.display = ""
+            text.innerHTML = `<b>Oracle</b>: ${data.Oracle.join(', ')}<br /><b>Priest</b>: ${data.Priest}`
+        }
+    };
+</script>
 <script src="ga.js"></script>
 </body>
 </html>
