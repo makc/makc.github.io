@@ -19,9 +19,10 @@
 		document.head.appendChild(style);
 	}
 	if (loading == 4) {
-		button.classList.add('clicked')
-		document.getElementById('music').play()
+		button.classList.add('clicked');
+		document.getElementById('music').play();
 		animate();
+		document.documentElement.requestFullscreen?.();
 		setTimeout(function () { renderer.domElement.className = 'a'; button.remove() }, 300);
 		setTimeout(function () { renderer.domElement.className = 'b' }, 900);
 	}
